@@ -19,8 +19,6 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - LOGGING_LEVEL=DEBUG
-    volumes:
-      - ./config.ini:/config.ini 
     networks:
       - testing_net
 EOL
@@ -37,8 +35,6 @@ for i in $(seq 1 "$NUM_CLIENTS"); do
       - CLI_LOG_LEVEL=DEBUG
     networks:
       - testing_net
-    volumes:
-      - ./config.yaml:/config.yaml 
     depends_on:
       - server
 EOL
