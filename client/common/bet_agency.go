@@ -25,8 +25,10 @@ func PrintBetAgency(betAgency *BetAgency) {
 
 func (bet_agency *BetAgency) SendBet() {
 	bet := bet_agency.bet
-	err := bet_agency.client.StartClient(bet.Serialize())
 
+	log.Infof("action: apuesta_enviada | result: success | dni: %s", bet.document)
+
+	err := bet_agency.client.StartClient(bet.Serialize())
 	if err != nil {
 		log.Errorf("action: send_bet | result: fail | client_id: %v | error: %v", 
 			bet_agency.client.config.ID, err)
@@ -34,8 +36,4 @@ func (bet_agency *BetAgency) SendBet() {
 	}
 
 	log.Infof("action: send_bet | result: success | client_id: %v", bet_agency.client.config.ID)
-}
-
-func (agency *BetAgency) Start() {
-	agency.SendBet()
 }
