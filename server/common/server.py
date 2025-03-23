@@ -16,7 +16,6 @@ class Server:
         self._server_socket.listen(listen_backlog)
         self.client_socket = None
         self._is_running = True
-        self._server_socket.settimeout(1.0)  # 1 segundo de timeout
 
     def run(self):
         """
@@ -120,8 +119,6 @@ class Server:
             logging.info(
                 f'action: accept_connections | result: success | ip: {addr[0]}')
             return c
-        except socket.timeout:
-            return None  # Volver al while y verificar _is_running
         except OSError as e:
             logging.info(
                 f'action: accept_connections | result: fail | error: {e}')
