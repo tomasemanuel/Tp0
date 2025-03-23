@@ -73,9 +73,9 @@ class Server:
             msg = self.__safe_receive(msg_length).rstrip()
             addr = self.client_socket.getpeername()
             logging.info(
-                f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
+                f'action: receive_message | result: success | ip: {addr[0]} | dni: {msg.decode().split("|")[3]}')
 
-            process_message(msg,addr)
+            process_message(msg, addr)
 
             self.__send_success_message()
         except OSError as e:
