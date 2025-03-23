@@ -37,3 +37,8 @@ func (bet_agency *BetAgency) SendBet() {
 
 	log.Infof("action: send_bet | result: success | client_id: %v", bet_agency.client.config.ID)
 }
+
+
+func (agency *BetAgency) Start() {
+	agency.SendBet()
+}
