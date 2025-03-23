@@ -78,7 +78,7 @@ class Server:
             process_message(msg, addr)
 
             self.__send_success_message()
-            self.running = False
+            self.stop()
 
         except OSError as e:
             self.__send_error_message()
@@ -93,7 +93,7 @@ class Server:
             if self.client_socket:
                 self.client_socket.shutdown(socket.SHUT_RDWR)
         except OSError as e:
-            if e.errno == 107:  # Transport endpoint is not connected
+            if e.errno == 107:  # Socket is already closed
                 logging.warning(
                     f'action: close_client_connection | result: already closed | warning: {e}')
             else:
@@ -135,11 +135,11 @@ class Server:
         logging.info("action: stop | result: success")
 
     def __send_success_message(self):
-        self.__safe_send("success")
+        self.__safe_send("ok ")
         logging.info("action: send_success_message | result: success")
 
     def __send_error_message(self):
-        self.__safe_send("error")
+        self.__safe_send("err")
         logging.error("action: send_error_message | result: success")
 
     def __safe_send(self, message):
