@@ -1,17 +1,20 @@
 import socket
 import logging
 import signal
-import json
-from common.utils import store_bets, Bet
+from common.utils import process_message
+
+
+MAX_MSG_SIZE = 4
 
 
 class Server:
     def __init__(self, port, listen_backlog):
         # Initialize server socket
+        signal.signal(signal.SIGTERM, lambda signal, frame: self.stop())
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
-        # Para saber el estado del servidor
+        self.client_socket = None
         self._is_running = True
 
     def run(self):
@@ -23,64 +26,81 @@ class Server:
         finishes, servers starts to accept new connections again
         """
 
-        signal.signal(signal.SIGTERM, self.__signal_handler)
-
         while self._is_running:
-            client_sock = self.__accept_new_connection()
-            if client_sock:
-                self.__handle_client_connection(client_sock)
+            try:
+                client_socket = self.__accept_new_connection()
+                if client_socket:
+                    self.client_socket = client_socket
+                    self.__handle_client_connection()
+            except OSError as e:
+                if client_socket is None:
+                    logging.error(f"action: run | result: client disconnected")
+                    break
+                else:
+                    logging.error(f"action: run | result: fail | error: {e}")
+                    self.__close_client_connection()
+                    break
 
-    def __handle_client_connection(self, client_sock):
+    def __receive_message_length(self):
+        try:
+            msg_len = int.from_bytes(self.__safe_receive(
+                MAX_MSG_SIZE).rstrip(), "little")
+            logging.info(
+                f"action: receive_message_length | result: success | msg_len: {msg_len}")
+            self.__send_success_message()
+            return msg_len
+
+        except Exception as e:
+            self.__send_error_message()
+            logging.error(
+                "action: receive_message_length | result: fail | error: {e}")
+            return 0
+
+    def __handle_client_connection(self):
         """
         Read message from a specific client socket and closes the socket
 
         If a problem arises in the communication with the client, the
         client socket will also be closed
         """
+
         try:
-            if not client_sock:
+            msg_length = self.__receive_message_length()
+
+            if msg_length == 0:
                 return
 
-            # Short-read: leer hasta que el cliente cierre o llegue EOF
-            data = b""
-            while True:
-                chunk = client_sock.recv(1024)
-                if not chunk:
-                    break
-                data += chunk
-
-            # Decodificar mensaje y parsear JSON
-            msg = data.decode("utf-8").strip()
-            addr = client_sock.getpeername()
-
+            msg = self.__safe_receive(msg_length).rstrip()
+            addr = self.client_socket.getpeername()
             logging.info(
                 f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
 
-            bet_data = json.loads(msg)
-            bet = Bet(
-                agency=bet_data["agencia"],
-                first_name=bet_data["nombre"],
-                last_name=bet_data["apellido"],
-                document=bet_data["dni"],
-                birthdate=bet_data["nacimiento"],
-                number=bet_data["numero"]
-            )
+            process_message(msg)
 
-            # Guardar la apuesta
-            store_bets([bet])
-
-            # Log de éxito
-            logging.info(
-                f'action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}')
-
-            # Enviar respuesta al cliente
-            client_sock.send(b"OK\n")
-
-        except Exception as e:
+            self.__send_success_message()
+        except OSError as e:
+            self.__send_error_message()
             logging.error(
-                f"action: handle_client_connection | result: fail | error: {e}")
+                f"action: receive_message | result: fail | error: {e}")
         finally:
-            client_sock.close()
+            self.__close_client_connection()
+
+    def __close_client_connection(self):
+        logging.info('action: close_client_connection | result: in_progress')
+        try:
+            if self.client_socket:
+                self.client_socket.shutdown(socket.SHUT_RDWR)
+        except OSError as e:
+            if e.errno == 107:  # Transport endpoint is not connected
+                logging.warning(
+                    f'action: close_client_connection | result: already closed | warning: {e}')
+            else:
+                logging.error(
+                    f'action: close_client_connection | result: fail | error: {e}')
+        finally:
+            if self.client_socket:
+                self.client_socket.close()
+            logging.info('action: close client connection | result: success')
 
     def __accept_new_connection(self):
         """
@@ -104,20 +124,38 @@ class Server:
                 f'action: accept_connections | result: fail | error: {e}')
             return None
 
-    def __signal_handler(self, signal, frame):
-        """
-        Signal handler for SIGTERM signal
-
-        When SIGTERM signal is received, the server stops accepting new
-        connections and finishes the current ones
-        """
-        # logging.info("action: signal_handler SIGTERM| result: in_progress")
+    def stop(self):
+        logging.info("action: stop | result: in_progress")
         self._is_running = False
-        try:
-            if self._server_socket:
-                self._server_socket.close()
-                logging.info(
-                    f"action: exit | result: success | detail: server socket closed")
-        except OSError as e:
-            logging.error(f"action: exit | result: fail | error: {e}")
-        logging.info(f"action: exit | result: success")
+        self._server_socket.close()
+
+        self.__close_client_connection()
+        logging.info("action: stop | result: success")
+
+    def __send_success_message(self):
+        self.__safe_send("success")
+        logging.info("action: send_success_message | result: success")
+
+    def __send_error_message(self):
+        self.__safe_send("error")
+        logging.error("action: send_error_message | result: success")
+
+    def __safe_send(self, message):
+        total_sent = 0
+        bytes_to_send = message.encode('utf-8')
+
+        while total_sent < len(message):
+            n = self.client_socket.send(bytes_to_send[total_sent:])
+            total_sent += n
+        return
+
+    def __safe_receive(self, buf_len):
+
+        msg = 0
+        buffer = bytes()
+        while msg < buf_len:
+            message = self.client_socket.recv(buf_len)
+            buffer += message
+            msg += len(message)
+
+        return buffer

@@ -6,26 +6,18 @@ networks:
       - subnet: 172.25.125.0/24
       driver: default
 services:
-
   client1:
     container_name: client1
-    image: client:latest
+    depends_on:
+    - server
     entrypoint: /client
     environment:
-      - CLI_ID=1
-      - CLI_LOG_LEVEL=DEBUG
-      - NOMBRE=Santiago
-      - APELLIDO=Lorca
-      - DOCUMENTO=30904465
-      - NACIMIENTO=1999-03-17
-      - NUMERO=7574
-      - AGENCIA=1
-
+    - CLI_ID=1
+    image: client:latest
     networks:
-      - testing_net
-    depends_on:
-      - server
-
+    - testing_net
+    volumes:
+    - ./client/config.yaml:/config.yaml
   server:
     entrypoint: python3 /main.py
     environment:

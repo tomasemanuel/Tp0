@@ -1,51 +1,18 @@
 package common
 
 import (
-	"bufio"
-	"fmt"
+	"encoding/binary"
 	"net"
-	"time"
 	"os"
 	"os/signal"
 	"syscall"
-	"encoding/json"
-	"strconv"
+	"time"
+
 	"github.com/op/go-logging"
 )
 
-
-
-type Bet struct {
-    Agencia    int    `json:"agencia"`
-    Nombre     string `json:"nombre"`
-    Apellido   string `json:"apellido"`
-    DNI        string `json:"dni"`
-    Nacimiento string `json:"nacimiento"`
-    Numero     int    `json:"numero"`
-}
-
-func getBetFromEnv() (*Bet, error) {
-    numero, err := strconv.Atoi(os.Getenv("NUMERO"))
-    if err != nil {
-        return nil, fmt.Errorf("invalid NUMERO: %v", err)
-    }
-
-    agencia, err := strconv.Atoi(os.Getenv("AGENCIA"))
-    if err != nil {
-        return nil, fmt.Errorf("invalid AGENCIA: %v", err)
-    }
-
-    return &Bet{
-        Agencia:    agencia,
-        Nombre:     os.Getenv("NOMBRE"),
-        Apellido:   os.Getenv("APELLIDO"),
-        DNI:        os.Getenv("DOCUMENTO"),
-        Nacimiento: os.Getenv("NACIMIENTO"),
-        Numero:     numero,
-    }, nil
-}
-
-
+const CONFIRM_MSG_LEN = 3
+const MAX_MSG_LEN = 4
 
 var log = logging.MustGetLogger("log")
 
@@ -71,24 +38,23 @@ func NewClient(config ClientConfig) *Client {
 		config: config,
 		isFinished: false,
 	}
+
 	InitializeSignalListener(client)
 	return client
 }
 
 func InitializeSignalListener(client *Client) {
-	sigs := make(chan os.Signal, 1)
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
 
-	signal.Notify(sigs, syscall.SIGTERM)
 	go func(client *Client) {
-		sig := <-sigs
-		log.Infof("action: received termination signal | result: in_progress | signal: %s", sig)
+		signal := <-signalChan
+		log.Infof("action: signal_received | result: success | client_id: %v | signal: %v", client.config.ID, signal)
 		err := client.Shutdown()
-	
-	if err != nil {
-		log.Infof("action: received termination signal | result: error | signal: %s | error: %v", sig, err)
-		return
-	}
-	log.Infof("action: received termination signal | result: success | signal: %s", sig)
+		if err != nil {
+			log.Errorf("action: signal_shutdown | result: fail | client_id: %v | error: %v", client.config.ID, err)
+		}
+		log.Infof("action: signal_shutdown | result: success | client_id: %v", client.config.ID)
 	}(client)
 }
 
@@ -109,71 +75,118 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
-func (c *Client) Shutdown() error {
-	c.conn.Close()
-	c.isFinished = true
+func (c *Client) StartClient(msg []byte) error {
+	err := c.createClientSocket()
+	if err != nil {
+		return err
+	}
+	err = c.SendMsg(msg)
+	if err != nil {
+		log.Errorf("action: send_message | result: fail | client_id: %v | error: %v")
+		c.Shutdown()
+		return err
+	}
+	log.Infof("action: send_message | result: success | client_id: %v", c.config.ID)
 	return nil
 }
 
-// StartClientLoop Send messages to the client until some time threshold is met
-func (c *Client) StartClientLoop() {
-	// autoincremental msgID to identify every message sent
-	msgID := 1
+func (c* Client) SendMsgLen(msg_len int) error {
+	msg_len_bytes := make([]byte, MAX_MSG_LEN)
 
-	loop:
-		// Send messages if the loopLapse threshold has not been surpassed
-		for timeout := time.After(c.config.LoopPeriod * time.Duration(c.config.LoopAmount)); !c.isFinished; {
-			select {
-			case <-timeout:
-				log.Infof("action: timeout_detected | result: success | client_id: %v",
-					c.config.ID,
-				)
-				break loop
-			default:
-			}
-			// Create the connection the server in every loop iteration. Send an
-			c.createClientSocket()
-			// TODO: Modify the send to avoid short-write
-			bet, err := getBetFromEnv()
-			if err != nil {
-				log.Errorf("action: bet_creation | result: fail | error: %v", err)
-				return
-			}
+	binary.LittleEndian.PutUint32(msg_len_bytes, uint32(msg_len))
+	return c.SendAny(msg_len_bytes)
+}
 
-			data, err := json.Marshal(bet)
-			if err != nil {
-				log.Errorf("action: serialize_bet | result: fail | error: %v", err)
-				return
-			}
+func (c *Client) SendMsg(msg []byte) error {
+	err := c.SendMsgLen(len(msg))
+	if err != nil {
+		log.Errorf("action: send_message_len | result: fail | client_id: %v | error: %v", c.config.ID, err)
+		return err
+	}
+	err = c.SendAny(msg)
+	if err != nil {
+		log.Errorf("action: send_any_message | result: fail | client_id: %v | error: %v", c.config.ID, err)
+		return err
+	}
 
-			// Send the data (ensuring short-write protection)
-			totalSent := 0
-			for totalSent < len(data) {
-				n, err := c.conn.Write(data[totalSent:])
-				if err != nil {
-					log.Errorf("action: send_bet | result: fail | client_id: %v | error: %v",
-						c.config.ID, err)
-					return
-				}
-				totalSent += n
-			}
+	return err
 
-			log.Infof("action: apuesta_enviada | result: success | dni: %s | numero: %d", bet.DNI, bet.Numero)
+}
 
-			// Wait for confirmation (not strictly needed for this exercise, optional)
-			c.conn.SetReadDeadline(time.Now().Add(2 * time.Second))
-			reader := bufio.NewReader(c.conn)
-			_, _ = reader.ReadBytes('\n') // discard response
+func (c *Client) SendAny(msg []byte) error {
+	var err error
 
-			c.conn.Close()
-			msgID++
+	total_sent := 0
+	msg_len := len(msg)
 
-			// Wait a time between sending one message and the next one
-
-			if !c.isFinished {
-				time.Sleep(c.config.LoopPeriod)
-			}
+	for total_sent < msg_len {
+		sent, err := c.conn.Write(msg[total_sent:])
+		total_sent += sent
+		if err != nil {
+			log.Errorf("action: send_any | result: fail | client_id: %v | error: %v", c.config.ID, err)
+			return err
 		}
+	}
 
-		log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
+	err = c.ReceiveConfirmation()
+
+	if err != nil {
+		log.Errorf("action: receive_confirmation | result: fail | client_id: %v | error: %v", c.config.ID, err)
+		return err
+	}
+
+	return err
+}
+
+func (c *Client) ReceiveConfirmation() error {
+	conf, err := c.SafeRecv(CONFIRM_MSG_LEN)
+	if err != nil || len(conf) != CONFIRM_MSG_LEN {
+		log.Errorf("action: receive_confirmation | result: fail | client_id: %v | error: %v", c.config.ID, err)
+		return err
+	}
+
+	log.Infof("action: receive_confirmation | result: success | client_id: %v", c.config.ID)
+	return err
+}
+
+func (c *Client) SafeRecv(length int) (res []byte, res_error error) {
+	buf := make([]byte, length)
+	total_read := 0
+	result := make([]byte, length)
+
+	var err error
+
+	for total_read < length {
+		read, err := c.conn.Read(buf)
+		if err != nil {
+			log.Errorf("action: safe_recv | result: fail | client_id: %v | error: %v", c.config.ID, err)
+			break
+		} else if read == 0 {
+			log.Infof("action: safe_recv | result: success | client_id: %v", c.config.ID)
+			return result, net.ErrClosed
+		}
+		copy(result[:len(buf)], buf)
+		total_read += read
+		buf = make([]byte, length)
+	}
+	return result, err
+}
+
+func (c *Client) Shutdown() error {
+
+    if c.conn != nil {
+        if err := c.conn.Close(); err != nil {
+            log.Errorf("action: shutdown | result: fail | client_id: %v | error: %v",
+                c.config.ID,
+                err,
+            )
+            return err
+        }
+        log.Infof("action: shutdown | result: success | client_id: %v | message: connection closed", c.config.ID)
+    }
+
+    c.isFinished = true
+    log.Infof("action: shutdown | result: success | client_id: %v | message: client finished", c.config.ID)
+
+    return nil
 }
