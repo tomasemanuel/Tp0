@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -111,19 +110,22 @@ func main() {
 		LoopPeriod:    v.GetDuration("loop.period"),
 	}
 
-	agencyID, _ := strconv.Atoi(v.GetString("id"))
-	filePath := fmt.Sprintf("./.data/agency-%d.csv", agencyID)
+	agencyID := v.GetString("id")
+	filePath := fmt.Sprintf("./.data/agency-%s.csv", agencyID)
 
 	if _, err := os.Stat(filePath); err == nil {
-		// Archivo existe: cargar y enviar apuestas desde archivo
-		bets, err := common.LoadBetsFromFile(filePath, v.GetString("id"))
+		bets, err := common.LoadBetsFromFile(filePath, agencyID)
 		if err != nil {
 			log.Criticalf("action: load_bets | result: fail | error: %v", err)
 		}
+
 		for _, bet := range bets {
 			client := common.NewClient(clientConfig)
 			client.StartClient(bet.Serialize())
 		}
+		log.Infof("action: client_finished | result: success | client_id: %v", agencyID)
+		return
+
 	} else {
 		// No hay archivo: usar variables de entorno
 		bet_agency := common.NewBetAgency(
@@ -135,6 +137,9 @@ func main() {
 			v.GetString("numero"),
 		)
 		bet_agency.Start()
+	
+		log.Infof("action: client_finished | result: success | client_id: %v", clientConfig.ID)
+	
 	}
 
 	
