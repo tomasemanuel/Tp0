@@ -20,7 +20,7 @@ func NewBetAgency(client_config ClientConfig, name string, last_name string, doc
 
 func (bet_agency *BetAgency) SendBet() {
 	bet := bet_agency.bet
-	err := bet_agency.client.StartClient(bet.serialize())
+	err := bet_agency.client.StartClient(bet.Serialize())
 
 	if err != nil {
 		log.Errorf("action: send_bet | result: fail | client_id: %v | error: %v", 
