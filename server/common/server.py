@@ -78,7 +78,7 @@ class Server:
             process_message(msg, addr)
 
             self.__send_success_message()
-            self.stop()
+            # self.stop()
 
         except OSError as e:
             self.__send_error_message()
@@ -91,14 +91,20 @@ class Server:
         logging.info('action: close_client_connection | result: in_progress')
         try:
             if self.client_socket:
-                self.client_socket.shutdown(socket.SHUT_RDWR)
+                try:
+                    self.client_socket.shutdown(socket.SHUT_RDWR)
+                except OSError as e:
+                    if e.errno == 107:  # Transport endpoint is not connected
+                        logging.warning(
+                            f'action: close_client_connection | result: already closed | warning: {e}')
+                    elif e.errno == 9:  # Bad file descriptor
+                        logging.warning(
+                            f'action: close_client_connection | result: already closed | warning: {e}')
+                    else:
+                        raise e  # Re-raise if it's an unexpected error
         except OSError as e:
-            if e.errno == 107:  # Socket is already closed
-                logging.warning(
-                    f'action: close_client_connection | result: already closed | warning: {e}')
-            else:
-                logging.error(
-                    f'action: close_client_connection | result: fail | error: {e}')
+            logging.error(
+                f'action: close_client_connection | result: fail | error: {e}')
         finally:
             if self.client_socket:
                 self.client_socket.close()
