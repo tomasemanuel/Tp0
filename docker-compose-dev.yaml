@@ -12,22 +12,22 @@ services:
     - server
     entrypoint: /client
     environment:
-    - CLI_NOMBRE=Santiago Lionel
-    - CLI_APELLIDO=Lorca
-    - CLI_DOCUMENTO=30904465
-    - CLI_NACIMIENTO=1999-03-17
-    - CLI_NUMERO=7574
+    - CLI_ID=1
+    - CLI_LOG_LEVEL=DEBUG
     image: client:latest
     networks:
     - testing_net
     volumes:
     - ./client/config.yaml:/config.yaml
   server:
+    container_name: server
     entrypoint: python3 /main.py
     environment:
     - PYTHONUNBUFFERED=1
+    - LOGGING_LEVEL=DEBUG
     image: server:latest
     networks:
     - testing_net
     volumes:
     - ./server/config.ini:/config.ini
+version: '3'

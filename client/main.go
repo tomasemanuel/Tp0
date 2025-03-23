@@ -114,6 +114,7 @@ func main() {
 		LoopAmount:    v.GetInt("loop.amount"),
 		LoopPeriod:    v.GetDuration("loop.period"),
 	}
+	
 	bet_agency := common.NewBetAgency(clientConfig, v.GetString("NOMBRE"), v.GetString("APELLIDO"), v.GetString("DOCUMENT"), v.GetString("NACIMIENTO"), v.GetString("NUMERO"))
 	common.PrintBetAgency(bet_agency)
 	bet_agency.Start()
