@@ -8,9 +8,44 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-
+	"encoding/json"
+	"strconv"
 	"github.com/op/go-logging"
 )
+
+
+
+type Bet struct {
+    Agencia    int    `json:"agencia"`
+    Nombre     string `json:"nombre"`
+    Apellido   string `json:"apellido"`
+    DNI        string `json:"dni"`
+    Nacimiento string `json:"nacimiento"`
+    Numero     int    `json:"numero"`
+}
+
+func getBetFromEnv() (*Bet, error) {
+    numero, err := strconv.Atoi(os.Getenv("NUMERO"))
+    if err != nil {
+        return nil, fmt.Errorf("invalid NUMERO: %v", err)
+    }
+
+    agencia, err := strconv.Atoi(os.Getenv("AGENCIA"))
+    if err != nil {
+        return nil, fmt.Errorf("invalid AGENCIA: %v", err)
+    }
+
+    return &Bet{
+        Agencia:    agencia,
+        Nombre:     os.Getenv("NOMBRE"),
+        Apellido:   os.Getenv("APELLIDO"),
+        DNI:        os.Getenv("DOCUMENTO"),
+        Nacimiento: os.Getenv("NACIMIENTO"),
+        Numero:     numero,
+    }, nil
+}
+
+
 
 var log = logging.MustGetLogger("log")
 
@@ -99,27 +134,39 @@ func (c *Client) StartClientLoop() {
 			// Create the connection the server in every loop iteration. Send an
 			c.createClientSocket()
 			// TODO: Modify the send to avoid short-write
-			fmt.Fprintf(
-				c.conn,
-				"[CLIENT %v] Message N°%v\n",
-				c.config.ID,
-				msgID,
-			)
-			msg, err := bufio.NewReader(c.conn).ReadString('\n')
-			msgID++
-			c.conn.Close()
-
+			bet, err := getBetFromEnv()
 			if err != nil {
-				log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
-					c.config.ID,
-					err,
-				)
+				log.Errorf("action: bet_creation | result: fail | error: %v", err)
 				return
 			}
-			log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
-				c.config.ID,
-				msg,
-			)
+
+			data, err := json.Marshal(bet)
+			if err != nil {
+				log.Errorf("action: serialize_bet | result: fail | error: %v", err)
+				return
+			}
+
+			// Send the data (ensuring short-write protection)
+			totalSent := 0
+			for totalSent < len(data) {
+				n, err := c.conn.Write(data[totalSent:])
+				if err != nil {
+					log.Errorf("action: send_bet | result: fail | client_id: %v | error: %v",
+						c.config.ID, err)
+					return
+				}
+				totalSent += n
+			}
+
+			log.Infof("action: apuesta_enviada | result: success | dni: %s | numero: %d", bet.DNI, bet.Numero)
+
+			// Wait for confirmation (not strictly needed for this exercise, optional)
+			c.conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+			reader := bufio.NewReader(c.conn)
+			_, _ = reader.ReadBytes('\n') // discard response
+
+			c.conn.Close()
+			msgID++
 
 			// Wait a time between sending one message and the next one
 

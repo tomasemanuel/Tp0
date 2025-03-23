@@ -1,6 +1,8 @@
 import socket
 import logging
 import signal
+import json
+from common.utils import store_bets, Bet
 
 
 class Server:
@@ -36,18 +38,47 @@ class Server:
         client socket will also be closed
         """
         try:
-            # TODO: Modify the receive to avoid short-reads
             if not client_sock:
                 return
-            msg = client_sock.recv(1024).rstrip().decode('utf-8')
+
+            # Short-read: leer hasta que el cliente cierre o llegue EOF
+            data = b""
+            while True:
+                chunk = client_sock.recv(1024)
+                if not chunk:
+                    break
+                data += chunk
+
+            # Decodificar mensaje y parsear JSON
+            msg = data.decode("utf-8").strip()
             addr = client_sock.getpeername()
+
             logging.info(
                 f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
-            # TODO: Modify the send to avoid short-writes
-            client_sock.send("{}\n".format(msg).encode('utf-8'))
-        except OSError as e:
+
+            bet_data = json.loads(msg)
+            bet = Bet(
+                agency=bet_data["agencia"],
+                first_name=bet_data["nombre"],
+                last_name=bet_data["apellido"],
+                document=bet_data["dni"],
+                birthdate=bet_data["nacimiento"],
+                number=bet_data["numero"]
+            )
+
+            # Guardar la apuesta
+            store_bets([bet])
+
+            # Log de éxito
+            logging.info(
+                f'action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}')
+
+            # Enviar respuesta al cliente
+            client_sock.send(b"OK\n")
+
+        except Exception as e:
             logging.error(
-                "action: receive_message | result: fail | error: {e}")
+                f"action: handle_client_connection | result: fail | error: {e}")
         finally:
             client_sock.close()
 
