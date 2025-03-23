@@ -4,7 +4,7 @@ PORT=12345
 MESSAGE="Hello world!"
 TIMEOUT=5
 SERVER_CONTAINER="server"
-NETWORK="testing_net"
+NETWORK="tp0_testing_net"
 
 RESPONSE=$(docker run --rm --network "$NETWORK" alpine:latest sh -c "
   apk add --no-cache netcat-openbsd > /dev/null &&
