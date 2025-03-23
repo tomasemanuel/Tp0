@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"net"
 	"time"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/op/go-logging"
 )
@@ -23,6 +26,7 @@ type ClientConfig struct {
 type Client struct {
 	config ClientConfig
 	conn   net.Conn
+	isFinished bool
 }
 
 // NewClient Initializes a new client receiving the configuration
@@ -30,8 +34,27 @@ type Client struct {
 func NewClient(config ClientConfig) *Client {
 	client := &Client{
 		config: config,
+		isFinished: false,
 	}
+	InitializeSignalListener(client)
 	return client
+}
+
+func InitializeSignalListener(client *Client) {
+	sigs := make(chan os.Signal, 1)
+
+	signal.Notify(sigs, syscall.SIGTERM)
+	go func(client *Client) {
+		sig := <-sigs
+		log.Infof("action: received termination signal | result: in_progress | signal: %s", sig)
+		err := client.Shutdown()
+	
+	if err != nil {
+		log.Infof("action: received termination signal | result: error | signal: %s | error: %v", sig, err)
+		return
+	}
+	log.Infof("action: received termination signal | result: success | signal: %s", sig)
+	}(client)
 }
 
 // CreateClientSocket Initializes client socket. In case of
@@ -45,58 +68,45 @@ func (c *Client) createClientSocket() error {
 			c.config.ID,
 			err,
 		)
+		return err
 	}
 	c.conn = conn
 	return nil
 }
 
+func (c *Client) Shutdown() error {
+	c.conn.Close()
+	c.isFinished = true
+	return nil
+}
+
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
+	// autoincremental msgID to identify every message sent
+	msgID := 1
 
-	// Create a context that can be canceled when receiving a termination signal
-	ctx, cancel := context.WithCancel(context.Background())
-
-	// Channel to capture OS signals
-	sigChan := make(chan os.Signal, 1)
-
-	// Notify the channel on SIGTERM or SIGINT
-	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT)
-
-	// Goroutine that waits for a termination signal and cancels the context
-	go func() {
-		sig := <-sigChan
-		log.Infof("action: shutdown_signal_received | signal: %v | client_id: %v", sig, c.config.ID)
-		cancel()
-	}()
-	
-	// There is an autoincremental msgID to identify every message sent Messages if the message amount 
-	/// threshold has not been surpassed
-	for msgID := 1; msgID <= c.config.LoopAmount; msgID++ {
-
-		// Check if shutdown signal was received
-		select {
-		case <-ctx.Done():
-			log.Infof("action: graceful_exit | result: success | client_id: %v", c.config.ID)
-			return
-		default:
-			// Create the connection to the server in every loop iteration
-			err := c.createClientSocket()
-			if err != nil {
-				log.Errorf("action: connect | result: fail | client_id: %v | error: %v", c.config.ID, err)
-				return
+	loop:
+		// Send messages if the loopLapse threshold has not been surpassed
+		for timeout := time.After(c.config.LoopPeriod * time.Duration(c.config.LoopAmount)); !c.isFinished; {
+			select {
+			case <-timeout:
+				log.Infof("action: timeout_detected | result: success | client_id: %v",
+					c.config.ID,
+				)
+				break loop
+			default:
 			}
-
+			// Create the connection the server in every loop iteration. Send an
+			c.createClientSocket()
 			// TODO: Modify the send to avoid short-write
-			// Send the message to the server
 			fmt.Fprintf(
 				c.conn,
 				"[CLIENT %v] Message N°%v\n",
 				c.config.ID,
 				msgID,
 			)
-
-			// Read the response from the server
 			msg, err := bufio.NewReader(c.conn).ReadString('\n')
+			msgID++
 			c.conn.Close()
 
 			if err != nil {
@@ -106,18 +116,17 @@ func (c *Client) StartClientLoop() {
 				)
 				return
 			}
-
-			// Log the successful response
 			log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
 				c.config.ID,
 				msg,
 			)
 
 			// Wait a time between sending one message and the next one
-			time.Sleep(c.config.LoopPeriod)
-		}
-	}
 
-	// Log when the loop ends normally
-	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
+			if !c.isFinished {
+				time.Sleep(c.config.LoopPeriod)
+			}
+		}
+
+		log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
 }
