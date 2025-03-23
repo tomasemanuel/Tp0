@@ -57,4 +57,4 @@ def process_message(msg: bytes, addr):
         logging.error(f"action: bet stored | result: fail | error: {e}")
         return
     logging.info(
-        f"action: apuesto_almacenada | result: success | ip {addr}")
+        f"action: apuesto_almacenada | result: success | ip: {addr[0]} | port: {addr[1]}")
