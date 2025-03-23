@@ -48,10 +48,27 @@ func LoadBetsFromFile(path string, agencyID string) ([]*Bet, error) {
 		if len(fields) != 5 {
 			continue
 		}
-		bets = append(bets, NewBet(
+
+		firstName := fields[0]
+		lastName := fields[1]
+		document := fields[2]
+		birthDate := fields[3]
+		number := fields[4]
+
+		bet := NewBet(
 			agencyID,
-			fields[0], fields[1], fields[2], fields[3], fields[4],
-		))
+			firstName,
+			lastName,
+			document,
+			birthDate,
+			number,
+		)
+		bets = append(bets, bet)
 	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
 	return bets, nil
 }
