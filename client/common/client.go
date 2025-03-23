@@ -52,72 +52,38 @@ func (c *Client) createClientSocket() error {
 
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
-
-	// Create a context that can be canceled when receiving a termination signal
-	ctx, cancel := context.WithCancel(context.Background())
-
-	// Channel to capture OS signals
-	sigChan := make(chan os.Signal, 1)
-
-	// Notify the channel on SIGTERM or SIGINT
-	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT)
-
-	// Goroutine that waits for a termination signal and cancels the context
-	go func() {
-		sig := <-sigChan
-		log.Infof("action: shutdown_signal_received | signal: %v | client_id: %v", sig, c.config.ID)
-		cancel()
-	}()
-	
-	// There is an autoincremental msgID to identify every message sent Messages if the message amount 
-	/// threshold has not been surpassed
+	// There is an autoincremental msgID to identify every message sent
+	// Messages if the message amount threshold has not been surpassed
 	for msgID := 1; msgID <= c.config.LoopAmount; msgID++ {
+		// Create the connection the server in every loop iteration. Send an
+		c.createClientSocket()
 
-		// Check if shutdown signal was received
-		select {
-		case <-ctx.Done():
-			log.Infof("action: graceful_exit | result: success | client_id: %v", c.config.ID)
+		// TODO: Modify the send to avoid short-write
+		fmt.Fprintf(
+			c.conn,
+			"[CLIENT %v] Message N°%v\n",
+			c.config.ID,
+			msgID,
+		)
+		msg, err := bufio.NewReader(c.conn).ReadString('\n')
+		c.conn.Close()
+
+		if err != nil {
+			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
+				c.config.ID,
+				err,
+			)
 			return
-		default:
-			// Create the connection to the server in every loop iteration
-			err := c.createClientSocket()
-			if err != nil {
-				log.Errorf("action: connect | result: fail | client_id: %v | error: %v", c.config.ID, err)
-				return
-			}
-
-			// TODO: Modify the send to avoid short-write
-			// Send the message to the server
-			fmt.Fprintf(
-				c.conn,
-				"[CLIENT %v] Message N°%v\n",
-				c.config.ID,
-				msgID,
-			)
-
-			// Read the response from the server
-			msg, err := bufio.NewReader(c.conn).ReadString('\n')
-			c.conn.Close()
-
-			if err != nil {
-				log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
-					c.config.ID,
-					err,
-				)
-				return
-			}
-
-			// Log the successful response
-			log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
-				c.config.ID,
-				msg,
-			)
-
-			// Wait a time between sending one message and the next one
-			time.Sleep(c.config.LoopPeriod)
 		}
-	}
 
-	// Log when the loop ends normally
+		log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
+			c.config.ID,
+			msg,
+		)
+
+		// Wait a time between sending one message and the next one
+		time.Sleep(c.config.LoopPeriod)
+
+	}
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
 }
