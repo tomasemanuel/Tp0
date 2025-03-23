@@ -75,7 +75,7 @@ class Server:
             logging.info(
                 f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
 
-            process_message(msg)
+            process_message(msg,addr)
 
             self.__send_success_message()
         except OSError as e:

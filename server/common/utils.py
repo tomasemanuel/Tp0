@@ -44,7 +44,7 @@ def load_bets() -> list[Bet]:
             yield Bet(row[0], row[1], row[2], row[3], row[4], row[5])
 
 
-def process_message(msg: bytes):
+def process_message(msg: bytes, addr):
     """
     Process a message from a client.
     """
@@ -55,4 +55,5 @@ def process_message(msg: bytes):
     except Exception as e:
         logging.error(f"action: bet stored | result: fail | error: {e}")
         return
-    logging.info(f"action: process_message | result: success")
+    logging.info(
+        f"action: apuesto_almacenada | result: success | ip {addr}")
