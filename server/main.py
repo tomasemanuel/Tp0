@@ -55,6 +55,8 @@ def main():
     # Initialize server and start server loop
     server = Server(port, listen_backlog)
     server.run()
+    logging.info("action: shutdown | result: success")
+    exit(0)  # 👈 agrega esta línea
 
 
 def initialize_log(logging_level):

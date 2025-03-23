@@ -16,6 +16,7 @@ class Server:
         self._server_socket.listen(listen_backlog)
         self.client_socket = None
         self._is_running = True
+        self._server_socket.settimeout(1.0)  # 1 segundo de timeout
 
     def run(self):
         """
@@ -111,8 +112,6 @@ class Server:
         Function blocks until a connection to a client is made.
         Then connection created is printed and returned
         """
-
-        # Connection arrived
         logging.info('action: accept_connections | result: in_progress')
         if not self._is_running or self._server_socket.fileno() == -1:
             return None
@@ -121,6 +120,8 @@ class Server:
             logging.info(
                 f'action: accept_connections | result: success | ip: {addr[0]}')
             return c
+        except socket.timeout:
+            return None  # Volver al while y verificar _is_running
         except OSError as e:
             logging.info(
                 f'action: accept_connections | result: fail | error: {e}')
