@@ -48,7 +48,8 @@ def process_message(msg: bytes, addr):
     """
     Process a message from a client.
     """
-    logging.info(f"action: process_message | result: in progress")
+    logging.info("action: process_message | result: IN_PROGRESS")
+
     try:
         bet = Bet.deserialize(msg)
         store_bets([bet])
