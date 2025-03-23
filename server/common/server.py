@@ -78,6 +78,8 @@ class Server:
             process_message(msg, addr)
 
             self.__send_success_message()
+            self.running = False
+
         except OSError as e:
             self.__send_error_message()
             logging.error(
