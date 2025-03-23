@@ -1,12 +1,20 @@
 #!/bin/bash
 
-docker build -f Dockerfile.netcat -t netcat-test .
+PORT=12345
+MESSAGE="Hello world!"
+TIMEOUT=5
+SERVER_CONTAINER="server"
+NETWORK="tp0_testing_net"
 
-RESPONSE=$(docker run --rm --network tp0_testing_net netcat-test)
+RESPONSE=$(docker run --rm --network "$NETWORK" alpine:latest sh -c "
+  echo \"$MESSAGE\" | nc $SERVER_CONTAINER $PORT
+")
 
+# Mostrar respuesta obtenida para debug
 echo "Response from container: '$RESPONSE'"
 
-if [ "$RESPONSE" = "hello world" ]; then
+# Validación
+if [ "$RESPONSE" = "$MESSAGE" ]; then
     echo "action: test_echo_server | result: success"
 else
     echo "action: test_echo_server | result: fail"
