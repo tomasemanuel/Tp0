@@ -8,6 +8,7 @@ import yaml
 def create_clients(file_path, clients):
     # Estructura base del compose
     data = {
+        'name': 'tp0'
         'version': '3',
         'services': {},
         'networks': {
