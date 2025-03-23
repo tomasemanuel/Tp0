@@ -67,7 +67,6 @@ services:
     volumes:
     - ./client/config.yaml:/config.yaml
   server:
-    container_name: server
     entrypoint: python3 /main.py
     environment:
     - PYTHONUNBUFFERED=1
