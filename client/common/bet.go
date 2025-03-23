@@ -55,6 +55,8 @@ func LoadBetsFromFile(path string, agencyID string) ([]*Bet, error) {
 		birthDate := fields[3]
 		number := fields[4]
 
+		log.Infof("action: load_bet | result: success | agency_id: %v | first_name: %v | last_name: %v | document: %v | birth_date: %v | number: %v",)
+
 		bet := NewBet(
 			agencyID,
 			firstName,

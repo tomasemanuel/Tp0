@@ -37,6 +37,12 @@ func InitConfig() (*viper.Viper, error) {
 	v.BindEnv("loop", "period")
 	v.BindEnv("loop", "amount")
 	v.BindEnv("log", "level")
+	v.BindEnv("NOMBRE")
+	v.BindEnv("APELLIDO")
+	v.BindEnv("DOCUMENTO")
+	v.BindEnv("NACIMIENTO")
+	v.BindEnv("NUMERO")
+
 
 	// Try to read configuration from config file. If config file
 	// does not exists then ReadInConfig will fail but configuration
@@ -101,7 +107,6 @@ func main() {
 	}
 
 	// Print program config with debugging purposes
-	//PrintConfig(v)
 
 	clientConfig := common.ClientConfig{
 		ServerAddress: v.GetString("server.address"),
@@ -109,35 +114,8 @@ func main() {
 		LoopAmount:    v.GetInt("loop.amount"),
 		LoopPeriod:    v.GetDuration("loop.period"),
 	}
-
-	agencyID := v.GetString("id")
-	filePath := fmt.Sprintf("./.data/agency-%s.csv", agencyID)
-	
-	// Si existe el archivo de apuestas, lo usamos
-	if _, err := os.Stat(filePath); err == nil {
-		bets, err := common.LoadBetsFromFile(filePath, agencyID)
-		if err != nil {
-			log.Criticalf("error loading bets from file: %v", err)
-		}
-	
-		for _, bet := range bets {
-			client := common.NewClient(clientConfig)
-			client.StartClient(bet.Serialize())
-		}
-	
-		log.Infof("action: client_finished | result: success | client_id: %v", clientConfig.ID)
-		return
-	}
-	
-	// Si no existe archivo, usar variables de entorno
-	bet_agency := common.NewBetAgency(
-		clientConfig,
-		v.GetString("nombre"),
-		v.GetString("apellido"),
-		v.GetString("documento"),
-		v.GetString("nacimiento"),
-		v.GetString("numero"),
-	)
+	bet_agency := common.NewBetAgency(clientConfig, v.GetString("NOMBRE"), v.GetString("APELLIDO"), v.GetString("DOCUMENT"), v.GetString("NACIMIENTO"), v.GetString("NUMERO"))
+	common.PrintBetAgency(bet_agency)
 	bet_agency.Start()
 	
 	log.Infof("action: client_finished | result: success | client_id: %v", clientConfig.ID)
