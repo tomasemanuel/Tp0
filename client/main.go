@@ -112,36 +112,33 @@ func main() {
 
 	agencyID := v.GetString("id")
 	filePath := fmt.Sprintf("./.data/agency-%s.csv", agencyID)
-
+	
+	// Si existe el archivo de apuestas, lo usamos
 	if _, err := os.Stat(filePath); err == nil {
 		bets, err := common.LoadBetsFromFile(filePath, agencyID)
 		if err != nil {
-			log.Criticalf("action: load_bets | result: fail | error: %v", err)
+			log.Criticalf("error loading bets from file: %v", err)
 		}
-
+	
 		for _, bet := range bets {
 			client := common.NewClient(clientConfig)
 			client.StartClient(bet.Serialize())
 		}
-		log.Infof("action: client_finished | result: success | client_id: %v", agencyID)
-		return
-
-	} else {
-		// No hay archivo: usar variables de entorno
-		bet_agency := common.NewBetAgency(
-			clientConfig,
-			v.GetString("nombre"),
-			v.GetString("apellido"),
-			v.GetString("documento"),
-			v.GetString("nacimiento"),
-			v.GetString("numero"),
-		)
-		bet_agency.Start()
 	
 		log.Infof("action: client_finished | result: success | client_id: %v", clientConfig.ID)
-	
+		return
 	}
-
+	
+	// Si no existe archivo, usar variables de entorno
+	bet_agency := common.NewBetAgency(
+		clientConfig,
+		v.GetString("nombre"),
+		v.GetString("apellido"),
+		v.GetString("documento"),
+		v.GetString("nacimiento"),
+		v.GetString("numero"),
+	)
+	bet_agency.Start()
 	
 	log.Infof("action: client_finished | result: success | client_id: %v", clientConfig.ID)
-}
+}	
