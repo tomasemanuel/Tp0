@@ -25,13 +25,16 @@ func PrintBetAgency(betAgency *BetAgency) {
 
 func SendBetsInBatches(client *Client, bets []*Bet, maxBatchSize int) {
 	client.createClientSocket()
+	log.Info("action: create_socket | result: success | client_id: %v and max batch size %d", client.config.ID, maxBatchSize)
 	for i := 0; i < len(bets); i += maxBatchSize {
 		end := i + maxBatchSize
 		if end > len(bets) {
 			end = len(bets)
 		}
 		batch := bets[i:end]
+	
 		serialized := SerializeBatch(batch)
+		log.Info("action: serialize_batch | result: success | client_id: %v | batch_size: %d", client.config.ID, len(batch))
 		var err = client.SendMsg(serialized)
 		if err != nil {
 			log.Errorf("action: send_message | result: fail | client_id: %v | error: %v")

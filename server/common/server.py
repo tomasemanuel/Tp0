@@ -43,8 +43,9 @@ class Server:
 
     def __receive_message_length(self):
         try:
-            msg_len = int.from_bytes(self.__safe_receive(
-                MAX_MSG_SIZE).rstrip(), "little")
+            msg_len = int.from_bytes(
+                self.__safe_receive(MAX_MSG_SIZE), byteorder='little')
+
             logging.info(
                 f"action: receive_message_length | result: success | msg_len: {msg_len}")
             self.__send_success_message()
@@ -61,13 +62,9 @@ class Server:
             addr = self.client_socket.getpeername()
             while self.client_socket:
                 msg_length = self.__receive_message_length()
-                logging.info(
-                    f"action: handle_client_connection | result: in_progress | msg length: {msg_length}")
                 if msg_length == 0:
                     return
                 msg = self.__safe_receive(msg_length).strip()
-                logging.info(
-                    f"action: handle_client_connection | result: success | msg: {msg}")
 
                 try:
                     process_message(msg, addr)
