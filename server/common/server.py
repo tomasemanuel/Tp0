@@ -101,7 +101,7 @@ class Server:
             if self.client_socket:
                 logging.info(
                     'action: close client connection | result: success')
-                self.stop()
+                self.client_socket = None  # <- Esto es importante
             return
 
     def __accept_new_connection(self):
@@ -125,10 +125,11 @@ class Server:
             return None
 
     def stop(self):
-        logging.info("action: stop | result: in_progress")
-        self._is_running = False
-        self._server_socket.close()
-        self.__close_client_connection()
+        if self.client_socket is not None:
+            self.__close_client_connection()
+        if self.socket:
+            self.socket.close()
+            self.socket = None
         logging.info("action: stop | result: success")
 
     def __send_success_message(self):
