@@ -37,6 +37,7 @@ func InitConfig() (*viper.Viper, error) {
 	v.BindEnv("loop", "period")
 	v.BindEnv("loop", "amount")
 	v.BindEnv("log", "level")
+	v.BindEnv("batch", "max_amount")
 	v.BindEnv("NOMBRE")
 	v.BindEnv("APELLIDO")
 	v.BindEnv("DOCUMENTO")
@@ -113,6 +114,7 @@ func main() {
 		ID:            v.GetString("id"),
 		LoopAmount:    v.GetInt("loop.amount"),
 		LoopPeriod:    v.GetDuration("loop.period"),
+		MaxBatchSize:  v.GetInt("batch.maxAmount"),
 	}
 
 
@@ -124,6 +126,7 @@ func main() {
 	if err != nil {
 		log.Criticalf("action: load_bets | result: fail | error: %v", err)
 	}
+	log.Infof("action: client_finished | result: success | bets: %d and max batch amount %d ", len(bets), clientConfig.MaxBatchSize)
 
 	common.SendBetsInBatches(client, bets, clientConfig.MaxBatchSize)
 

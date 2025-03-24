@@ -46,11 +46,12 @@ func SendBetsInBatches(client *Client, bets []*Bet, maxBatchSize int) {
 		}
 		batch := bets[i:end]
 		serialized := SerializeBatch(batch)
+
 		err := client.StartClient(serialized)
 		if err != nil {
-			log.Errorf("action: send_batch | result: fail | error: %v", err)
+			// log.Errorf("action: send_batch | result: fail | error: %v", err)
 		} else {
-			log.Infof("action: send_batch | result: success | size: %d", len(batch))
+			// log.Infof("action: send_batch | result: success | size: %d", len(batch))
 		}
 	}
 }

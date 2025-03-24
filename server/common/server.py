@@ -73,13 +73,13 @@ class Server:
 
         except OSError as e:
             self.__send_error_message()
-            logging.error(
-                f"action: receive_message | result: fail | error: {e}")
+            # logging.error(
+            #     f"action: receive_message | result: fail | error: {e}")
         finally:
             self.__close_client_connection()
 
     def __close_client_connection(self):
-        logging.info('action: close_client_connection | result: in_progress')
+        # logging.info('action: close_client_connection | result: in_progress')
         try:
             if self.client_socket:
                 try:
@@ -108,26 +108,26 @@ class Server:
         Function blocks until a connection to a client is made.
         Then connection created is printed and returned
         """
-        logging.info('action: accept_connections | result: in_progress')
+        # logging.info('action: accept_connections | result: in_progress')
         if not self._is_running or self._server_socket.fileno() == -1:
             return None
         try:
             c, addr = self._server_socket.accept()
-            logging.info(
-                f'action: accept_connections | result: success | ip: {addr[0]}')
+            # logging.info(
+            # f'action: accept_connections | result: success | ip: {addr[0]}')
             return c
         except OSError as e:
-            logging.info(
-                f'action: accept_connections | result: fail | error: {e}')
+            # logging.info(
+            # f'action: accept_connections | result: fail | error: {e}')
             return None
 
     def stop(self):
-        logging.info("action: stop | result: in_progress")
+        # logging.info("action: stop | result: in_progress")
         self._is_running = False
         self._server_socket.close()
 
         self.__close_client_connection()
-        logging.info("action: stop | result: success")
+        # logging.info("action: stop | result: success")
 
     def __send_success_message(self):
         self.__safe_send("ok ")
