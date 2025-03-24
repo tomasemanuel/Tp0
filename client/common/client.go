@@ -76,17 +76,22 @@ func (c *Client) createClientSocket() error {
 }
 
 func (c *Client) StartClient(msg []byte) error {
-	err := c.createClientSocket()
-	if err != nil {
-		return err
+	for msgID := 1; msgID <= c.config.LoopAmount; msgID++ {
+		err := c.createClientSocket()
+		if err != nil {
+			return err
+		}
+		err = c.SendMsg(msg)
+		if err != nil {
+			log.Errorf("action: send_message | result: fail | client_id: %v | error: %v")
+			c.Shutdown()
+			return err
+		}
+		log.Infof("action: send_message | result: success | client_id: %v", c.config.ID)
+		// Wait a time between sending one message and the next one
+		time.Sleep(c.config.LoopPeriod)
 	}
-	err = c.SendMsg(msg)
-	if err != nil {
-		log.Errorf("action: send_message | result: fail | client_id: %v | error: %v")
-		c.Shutdown()
-		return err
-	}
-	log.Infof("action: send_message | result: success | client_id: %v", c.config.ID)
+	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
 	return nil
 }
 
