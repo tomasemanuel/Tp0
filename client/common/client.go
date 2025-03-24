@@ -116,7 +116,6 @@ func (c *Client) SendAny(msg []byte) error {
 			return err
 		}
 	}
-	log.Info("action: send_any | result: success waiting conf | client_id: %v", c.config.ID)
 	err = c.ReceiveConfirmation()
 
 	if err != nil {
