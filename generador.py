@@ -46,7 +46,11 @@ def create_clients(file_path, clients):
             ],
             'networks': ['testing_net'],
             'depends_on': ['server'],
-            'volumes': ['./client/config.yaml:/config.yaml']
+            'volumes': [
+                './client/config.yaml:/config.yaml',
+                './.data:/.data'
+            ]
+
         }
 
     # Escribir archivo compose sobrescribiendo lo que había
