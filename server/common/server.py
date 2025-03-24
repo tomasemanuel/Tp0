@@ -38,7 +38,7 @@ class Server:
                     break
                 else:
                     logging.error(f"action: run | result: fail | error: {e}")
-                    self.__close_client_connection()
+                    # self.__close_client_connection()
                     break
 
     def __receive_message_length(self):
