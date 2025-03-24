@@ -208,8 +208,9 @@ func LoadBetsFromFile(path string, agencyID string) ([]*Bet, error) {
 
 func SendDoneMessage(client *Client) {
 	log.Info("action: send_done_message | result: in_progress | client_id: %v", client.config.ID)
+
 	doneMsg := fmt.Sprintf("DONE_MESSAGE:%s", client.config.ID)
-	client.SendMsg([]byte(doneMsg))
+	err := client.SendMsg([]byte(doneMsg))
 	log.Info("action: send_done_message | result: success | client_id: %v", client.config.ID)
 	conf, err :=client.SafeRecv(8)
 	log.Info("action: receive_confirmation_done | result: success | client_id: %v", client.config.ID)
@@ -223,7 +224,6 @@ func SendDoneMessage(client *Client) {
 			log.Errorf("action: consulta_ganadores | result: fail | response: %s", string(conf))
 		}
 	}
-	// Ahora sí, cerrar
 	if err := client.Shutdown(); err != nil {
 		log.Criticalf("action: shutdown | result: fail | client_id: %v | error: %v", client.config.ID, err)
 	}

@@ -2,7 +2,7 @@ import socket
 import logging
 import signal
 from common.utils import process_message
-
+import os
 
 MAX_MSG_SIZE = 4
 
@@ -16,6 +16,8 @@ class Server:
         self._server_socket.listen(listen_backlog)
         self.client_socket = None
         self._is_running = True
+        self.done_agencies = set()
+        self.number_of_clients = os.getenv('CLIENTS_LENGTH', 0)
 
     def run(self):
         """
@@ -28,6 +30,9 @@ class Server:
 
         while self._is_running:
             try:
+                if self.done_agencies.__len__() == self.number_of_clients:
+                    self.lotery()
+                    break
                 self.client_socket = self.__accept_new_connection()
                 if self.client_socket is None or not self._is_running:
                     break
@@ -41,6 +46,10 @@ class Server:
                     logging.error(f"action: run | result: fail | error: {e}")
                     self.__close_client_connection()
                     break
+
+    def lotery(self):
+        logging.info("action: lotery | result: in_progress")
+        winners_by_agency = {}
 
     def __receive_message_length(self):
         try:
@@ -75,17 +84,20 @@ class Server:
                 msg = self.__safe_receive(msg_length).strip()
                 if not msg:
                     break
+                logging.info(
+                    f"action: handle_client_connection_still | result: in_progress | ip: {addr[0]} | msg: {msg}")
                 try:
-                    process_message(msg, addr)
+                    agencyID = process_message(msg, addr)
+                    if agencyID:
+                        logging.info(
+                            f"action: done_received | result: success | ip: {addr[0]}")
+                        self.done_agencies.add(agencyID)
+                        break
                     self.__send_success_message()
                 except Exception:
                     self.__send_error_message()
         except OSError as e:
             self.__send_error_message()
-        finally:
-            logging.info(
-                f"action: close connection | result: in_progress | ip: {addr[0]}")
-            self.__close_client_connection()
 
     def __close_client_connection(self):
         # logging.info('action: close_client_connection | result: in_progress')

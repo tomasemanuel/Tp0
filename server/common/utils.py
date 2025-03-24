@@ -44,25 +44,28 @@ def load_bets() -> list[Bet]:
             yield Bet(row[0], row[1], row[2], row[3], row[4], row[5])
 
 
-def process_message(msg: bytes, addr):
+def process_message(msg: bytes, addr, done_agencies: set, winners_by_agency: dict):
     """
     Process a batch message from a client.
     Each line represents one bet.
     """
 
     logging.info("action: process_message | result: in_progress")
-    lines = msg.decode("utf-8").strip().split("\n")
-    bets = []
+    decoded = msg.decode("utf-8").strip()
+    logging.debug(
+        f"action: process_message | result: in_progress | decoded: {decoded}")
+    if decoded.startswith("done:"):
+        logging.info(
+            f"action: done_received | result: success | ip: {addr[0]}")
+        agency_id = int(decoded.split(":")[1])
+        return agency_id
 
-    for line in lines:
-        try:
+    else:
+        lines = decoded.split("\n")
+        bets = []
+        for line in lines:
             bet = Bet.deserialize(line.encode("utf-8"))
             bets.append(bet)
-        except Exception as e:
-            logging.error(
-                f"action: apuesta_recibida | result: fail | cantidad: {len(lines)} | error: {e}")
-            raise ValueError("Invalid bet format in batch")
-
-    store_bets(bets)
-    logging.info(
-        f"action: apuesta_recibida | result: success | cantidad: {len(bets)}")
+        store_bets(bets)
+        logging.info(
+            f"action: apuesta_recibida | result: success | cantidad: {len(bets)}")

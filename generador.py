@@ -21,6 +21,7 @@ def create_clients(file_path, clients):
             }
         }
     }
+    cli_length = f'CLIENTS_LENGTH={clients}'
 
     # Agregar servidor
     data['services']['server'] = {
@@ -29,7 +30,8 @@ def create_clients(file_path, clients):
         'entrypoint': 'python3 /main.py',
         'environment': [
             'PYTHONUNBUFFERED=1',
-            'LOGGING_LEVEL=DEBUG'
+            'LOGGING_LEVEL=DEBUG',
+            cli_length
         ],
         'networks': ['testing_net'],
         'volumes': ['./server/config.ini:/config.ini']
