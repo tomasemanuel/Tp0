@@ -28,10 +28,11 @@ class Server:
 
         while self._is_running:
             try:
-                client_socket = self.__accept_new_connection()
-                if client_socket:
-                    self.client_socket = client_socket
-                    self.__handle_client_connection()
+                self.client_socket = self.__accept_new_connection()
+                if self.client_socket is None or not self._is_running:
+                    break
+                self.__handle_client_connection()
+
             except OSError as e:
                 if client_socket is None:
                     logging.error(f"action: run | result: client disconnected")
@@ -102,7 +103,7 @@ class Server:
                 logging.info(
                     'action: close client connection | result: success')
 
-                self.client_socket = None  # <- Esto es importante
+                self.client_socket = None
             return
 
     def __accept_new_connection(self):
