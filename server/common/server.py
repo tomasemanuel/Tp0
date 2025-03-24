@@ -155,11 +155,7 @@ class Server:
             f"action: safe_send | result: in_progress | message: {message}")
         while total_sent < len(message):
             n = self.client_socket.send(bytes_to_send[total_sent:])
-
             total_sent += n
-        logging.info(
-            f"action: safe_send | result: sucess | message: {message}")
-
         return
 
     def __safe_receive(self, buf_len):
