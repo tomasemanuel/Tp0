@@ -44,8 +44,11 @@ class Server:
 
     def __receive_message_length(self):
         try:
+            receive = self.client_socket.recv(MAX_MSG_SIZE)
+            if not receive:
+                return 0
             msg_len = int.from_bytes(
-                self.__safe_receive(MAX_MSG_SIZE), byteorder='little')
+                receive, byteorder='little')
 
             logging.info(
                 f"action: receive_message_length | result: success | msg_len: {msg_len}")
@@ -62,7 +65,11 @@ class Server:
         try:
             addr = self.client_socket.getpeername()
             while self.client_socket:
+                logging.info(
+                    f"action: handle_client_connection | result: in_progress | ip: {addr[0]}")
                 msg_length = self.__receive_message_length()
+                logging.info(
+                    f"action: handle_client_connection | result: in_progress | ip: {addr[0]} | msg_length: {msg_length}")
                 if msg_length == 0:
                     break
                 msg = self.__safe_receive(msg_length).strip()
@@ -73,12 +80,11 @@ class Server:
                     self.__send_success_message()
                 except Exception:
                     self.__send_error_message()
-
         except OSError as e:
             self.__send_error_message()
-            # logging.error(
-            #     f"action: receive_message | result: fail | error: {e}")
         finally:
+            logging.info(
+                f"action: close connection | result: in_progress | ip: {addr[0]}")
             self.__close_client_connection()
 
     def __close_client_connection(self):
@@ -103,7 +109,6 @@ class Server:
             if self.client_socket:
                 logging.info(
                     'action: close client connection | result: success')
-
                 self.client_socket = None
             return
 
@@ -146,10 +151,15 @@ class Server:
     def __safe_send(self, message):
         total_sent = 0
         bytes_to_send = message.encode('utf-8')
-
+        logging.info(
+            f"action: safe_send | result: in_progress | message: {message}")
         while total_sent < len(message):
             n = self.client_socket.send(bytes_to_send[total_sent:])
+
             total_sent += n
+        logging.info(
+            f"action: safe_send | result: sucess | message: {message}")
+
         return
 
     def __safe_receive(self, buf_len):

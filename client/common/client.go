@@ -15,7 +15,7 @@ import (
 
 const CONFIRM_MSG_LEN = 3
 const MAX_MSG_LEN = 4
-
+const EXIT = "exit"
 var log = logging.MustGetLogger("log")
 
 // ClientConfig Configuration used by the client
@@ -172,6 +172,7 @@ func (c *Client) Shutdown() error {
         }
         log.Info("action: shutdown | result: success | client_id: %v | message: connection closed", c.config.ID)
     }
+	
 
     c.isFinished = true
     log.Info("action: shutdown | result: success | client_id: %v | message: client finished", c.config.ID)

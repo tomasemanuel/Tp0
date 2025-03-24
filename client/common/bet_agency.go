@@ -43,5 +43,7 @@ func SendBetsInBatches(client *Client, bets []*Bet, maxBatchSize int) {
 		}
 		log.Info("action: send_message | result: success | client_id: %v", client.config.ID)
 	}
+	
+	client.Shutdown()
 }
 
