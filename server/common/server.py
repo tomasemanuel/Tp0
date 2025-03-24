@@ -101,8 +101,7 @@ class Server:
             if self.client_socket:
                 logging.info(
                     'action: close client connection | result: success')
-                logging.info(
-                    'action: exit | result: success')
+
                 self.client_socket = None  # <- Esto es importante
             return
 
@@ -132,7 +131,7 @@ class Server:
         if self.socket:
             self.socket.close()
             self.socket = None
-        logging.info("action: stop | result: success")
+        logging.info("action: exit | result: success")
 
     def __send_success_message(self):
         self.__safe_send("ok ")
