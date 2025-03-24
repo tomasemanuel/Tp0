@@ -64,9 +64,10 @@ class Server:
             while self.client_socket:
                 msg_length = self.__receive_message_length()
                 if msg_length == 0:
-                    return
+                    break
                 msg = self.__safe_receive(msg_length).strip()
-
+                if not msg:
+                    break
                 try:
                     process_message(msg, addr)
                     self.__send_success_message()
@@ -156,8 +157,13 @@ class Server:
         msg = 0
         buffer = bytes()
         while msg < buf_len:
-            message = self.client_socket.recv(buf_len)
-            buffer += message
-            msg += len(message)
+            try:
+                message = self.client_socket.recv(buf_len)
+                buffer += message
+                msg += len(message)
+            except OSError as e:
+                logging.error(
+                    f"action: safe_receive | result: fail | error: {e}")
+                return None
 
         return buffer
