@@ -78,21 +78,6 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
-func (c *Client) StartClient(msg []byte) error {
-	err := c.createClientSocket()
-	if err != nil {
-		return err
-	}
-	err = c.SendMsg(msg)
-	if err != nil {
-		log.Errorf("action: send_message | result: fail | client_id: %v | error: %v")
-		c.Shutdown()
-		return err
-	}
-	log.Infof("action: send_message | result: success | client_id: %v", c.config.ID)
-	return nil
-}
-
 func (c* Client) SendMsgLen(msg_len int) error {
 	msg_len_bytes := make([]byte, MAX_MSG_LEN)
 
@@ -112,7 +97,6 @@ func (c *Client) SendMsg(msg []byte) error {
 		log.Errorf("action: send_any_message | result: fail | client_id: %v | error: %v", c.config.ID, err)
 		return err
 	}
-
 	return err
 
 }
@@ -197,7 +181,7 @@ func (c *Client) Shutdown() error {
 
 func LoadBetsFromFile(path string, agencyID string) ([]*Bet, error) {
 	file, err := os.Open(path)
-	if err != nil {
+	if err != nil {	
 		return nil, err
 	}
 	defer file.Close()

@@ -23,22 +23,8 @@ func PrintBetAgency(betAgency *BetAgency) {
 		betAgency.client.config.ID, betAgency.bet.first_name, betAgency.bet.last_name, betAgency.bet.document, betAgency.bet.birth_date, betAgency.bet.number)
 }
 
-func (bet_agency *BetAgency) SendBet() {
-	bet := bet_agency.bet
-
-	log.Infof("action: apuesta_enviada | result: success | dni: %s", bet.document)
-
-	err := bet_agency.client.StartClient(bet.Serialize())
-	if err != nil {
-		log.Errorf("action: send_bet | result: fail | client_id: %v | error: %v", 
-			bet_agency.client.config.ID, err)
-		return
-	}
-
-	log.Infof("action: send_bet | result: success | client_id: %v", bet_agency.client.config.ID)
-}
-
 func SendBetsInBatches(client *Client, bets []*Bet, maxBatchSize int) {
+	client.createClientSocket()
 	for i := 0; i < len(bets); i += maxBatchSize {
 		end := i + maxBatchSize
 		if end > len(bets) {
@@ -46,18 +32,13 @@ func SendBetsInBatches(client *Client, bets []*Bet, maxBatchSize int) {
 		}
 		batch := bets[i:end]
 		serialized := SerializeBatch(batch)
-
-		err := client.StartClient(serialized)
+		var err = client.SendMsg(serialized)
 		if err != nil {
-			log.Errorf("action: send_batch | result: fail | error: %v", err)
-		} else {
-			log.Infof("action: send_batch | result: success | size: %d", len(batch))
+			log.Errorf("action: send_message | result: fail | client_id: %v | error: %v")
+			client.Shutdown()
+			return
 		}
+		log.Info("action: send_message | result: success | client_id: %v", client.config.ID)
 	}
 }
 
-
-
-func (agency *BetAgency) Start() {
-	agency.SendBet()
-}

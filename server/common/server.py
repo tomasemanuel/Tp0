@@ -59,18 +59,21 @@ class Server:
     def __handle_client_connection(self):
         try:
             addr = self.client_socket.getpeername()
-            msg_length = self.__receive_message_length()
-            if msg_length == 0:
-                return
+            while self.client_socket:
+                msg_length = self.__receive_message_length()
+                logging.info(
+                    f"action: handle_client_connection | result: in_progress | msg length: {msg_length}")
+                if msg_length == 0:
+                    return
+                msg = self.__safe_receive(msg_length).strip()
+                logging.info(
+                    f"action: handle_client_connection | result: success | msg: {msg}")
 
-            msg = self.__safe_receive(msg_length).strip()
-            # addr = self.client_socket.getpeername()
-
-            try:
-                process_message(msg, addr)
-                self.__send_success_message()
-            except Exception:
-                self.__send_error_message()
+                try:
+                    process_message(msg, addr)
+                    self.__send_success_message()
+                except Exception:
+                    self.__send_error_message()
 
         except OSError as e:
             self.__send_error_message()
