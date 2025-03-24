@@ -101,6 +101,8 @@ class Server:
             if self.client_socket:
                 logging.info(
                     'action: close client connection | result: success')
+                logging.info(
+                    'action: exit | result: success')
                 self.client_socket = None  # <- Esto es importante
             return
 
