@@ -52,12 +52,12 @@ func InitializeSignalListener(client *Client) {
 
 	go func(client *Client) {
 		signal := <-signalChan
-		log.Infof("action: signal_received | result: success | client_id: %v | signal: %v", client.config.ID, signal)
+		log.Info("action: signal_received | result: success | client_id: %v | signal: %v", client.config.ID, signal)
 		err := client.Shutdown()
 		if err != nil {
 			log.Errorf("action: signal_shutdown | result: fail | client_id: %v | error: %v", client.config.ID, err)
 		}
-		log.Infof("action: signal_shutdown | result: success | client_id: %v", client.config.ID)
+		log.Info("action: signal_shutdown | result: success | client_id: %v", client.config.ID)
 	}(client)
 }
 
@@ -75,7 +75,7 @@ func (c *Client) createClientSocket() error {
 		return err
 	}
 	c.conn = conn
-	log.Infof("action: connect | result: success | client_id: %v", c.config.ID)
+	log.Info("action: connect | result: success | client_id: %v", c.config.ID)
 	return nil
 }
 
@@ -133,7 +133,7 @@ func (c *Client) ReceiveConfirmation() error {
 		return err
 	}
 
-	log.Infof("action: receive_confirmation | result: success | client_id: %v", c.config.ID)
+	log.Info("action: receive_confirmation | result: success | client_id: %v", c.config.ID)
 	return err
 }
 
@@ -150,7 +150,7 @@ func (c *Client) SafeRecv(length int) (res []byte, res_error error) {
 			log.Errorf("action: safe_recv | result: fail | client_id: %v | error: %v", c.config.ID, err)
 			break
 		} else if read == 0 {
-			log.Infof("action: safe_recv | result: success | client_id: %v", c.config.ID)
+			log.Info("action: safe_recv | result: success | client_id: %v", c.config.ID)
 			return result, net.ErrClosed
 		}
 		copy(result[:len(buf)], buf)
@@ -170,11 +170,11 @@ func (c *Client) Shutdown() error {
             )
             return err
         }
-        log.Infof("action: shutdown | result: success | client_id: %v | message: connection closed", c.config.ID)
+        log.Info("action: shutdown | result: success | client_id: %v | message: connection closed", c.config.ID)
     }
 
     c.isFinished = true
-    log.Infof("action: shutdown | result: success | client_id: %v | message: client finished", c.config.ID)
+    log.Info("action: shutdown | result: success | client_id: %v | message: client finished", c.config.ID)
 
     return nil
 }

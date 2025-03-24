@@ -19,7 +19,7 @@ func NewBetAgency(client_config ClientConfig, name string, last_name string, doc
 }
 
 func PrintBetAgency(betAgency *BetAgency) {
-	log.Infof("action: load_bet | result: success | agency_id: %v | first_name: %v | last_name: %v | document: %v | birth_date: %v | number: %v",
+	log.Info("action: load_bet | result: success | agency_id: %v | first_name: %v | last_name: %v | document: %v | birth_date: %v | number: %v",
 		betAgency.client.config.ID, betAgency.bet.first_name, betAgency.bet.last_name, betAgency.bet.document, betAgency.bet.birth_date, betAgency.bet.number)
 }
 
