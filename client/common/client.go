@@ -82,20 +82,8 @@ func (c *Client) Shutdown() error {
 
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop() {
-	// autoincremental msgID to identify every message sent
-	// msgID := 1
 
 	for msgID := 1; msgID <= c.config.LoopAmount; msgID++ {
-		// Send messages if the loopLapse threshold has not been surpassed
-		// for timeout := time.After(c.config.LoopPeriod * time.Duration(c.config.LoopAmount)); !c.isFinished; {
-		// 	select {
-		// 	case <-timeout:
-		// 		log.Infof("action: timeout_detected | result: success | client_id: %v",
-		// 			c.config.ID,
-		// 		)
-		// 		break loop
-		// 	default:
-		// 	}
 		if c.isFinished {
 			log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
 			return
