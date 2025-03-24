@@ -58,12 +58,13 @@ class Server:
 
     def __handle_client_connection(self):
         try:
+            addr = self.client_socket.getpeername()
             msg_length = self.__receive_message_length()
             if msg_length == 0:
                 return
 
             msg = self.__safe_receive(msg_length).strip()
-            addr = self.client_socket.getpeername()
+            # addr = self.client_socket.getpeername()
 
             try:
                 process_message(msg, addr)
@@ -98,8 +99,10 @@ class Server:
                 f'action: close_client_connection | result: fail | error: {e}')
         finally:
             if self.client_socket:
-                self.client_socket.close()
-            logging.info('action: close client connection | result: success')
+                logging.info(
+                    'action: close client connection | result: success')
+                self.stop()
+            return
 
     def __accept_new_connection(self):
         """
@@ -122,12 +125,11 @@ class Server:
             return None
 
     def stop(self):
-        # logging.info("action: stop | result: in_progress")
+        logging.info("action: stop | result: in_progress")
         self._is_running = False
         self._server_socket.close()
-
         self.__close_client_connection()
-        # logging.info("action: stop | result: success")
+        logging.info("action: stop | result: success")
 
     def __send_success_message(self):
         self.__safe_send("ok ")

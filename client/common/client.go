@@ -106,6 +106,7 @@ func (c *Client) SendMsg(msg []byte) error {
 		log.Errorf("action: send_message_len | result: fail | client_id: %v | error: %v", c.config.ID, err)
 		return err
 	}
+	
 	err = c.SendAny(msg)
 	if err != nil {
 		log.Errorf("action: send_any_message | result: fail | client_id: %v | error: %v", c.config.ID, err)
