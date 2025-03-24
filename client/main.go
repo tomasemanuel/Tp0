@@ -126,8 +126,6 @@ func main() {
 	if err != nil {
 		log.Criticalf("action: load_bets | result: fail | error: %v", err)
 	}
-	log.Infof("action: client_finished | result: success | bets: %d and max batch amount %d ", len(bets), clientConfig.MaxBatchSize)
-
 	common.SendBetsInBatches(client, bets, clientConfig.MaxBatchSize)
 
 	log.Infof("action: client_finished | result: success | client_id: %v", clientConfig.ID)
