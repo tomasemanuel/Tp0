@@ -131,7 +131,7 @@ class Server:
         if self.socket:
             self.socket.close()
             self.socket = None
-        # logging.info("action: exit | result: success")
+        logging.info("action: exit | result: success")
 
     def __send_success_message(self):
         self.__safe_send("ok ")
