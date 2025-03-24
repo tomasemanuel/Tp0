@@ -3,6 +3,7 @@ package common
 import (
 	"bufio"
 	"encoding/binary"
+	"fmt"
 	"net"
 	"os"
 	"os/signal"
@@ -15,6 +16,7 @@ import (
 
 const CONFIRM_MSG_LEN = 3
 const MAX_MSG_LEN = 4
+const DONE_MESSAGE = "done"
 const EXIT = "exit"
 var log = logging.MustGetLogger("log")
 
@@ -200,4 +202,29 @@ func LoadBetsFromFile(path string, agencyID string) ([]*Bet, error) {
 	}
 
 	return bets, nil
+}
+
+
+
+func SendDoneMessage(client *Client) {
+	log.Info("action: send_done_message | result: in_progress | client_id: %v", client.config.ID)
+	doneMsg := fmt.Sprintf("DONE_MESSAGE:%s", client.config.ID)
+	client.SendMsg([]byte(doneMsg))
+	log.Info("action: send_done_message | result: success | client_id: %v", client.config.ID)
+	conf, err :=client.SafeRecv(8)
+	log.Info("action: receive_confirmation_done | result: success | client_id: %v", client.config.ID)
+	if err != nil {
+		log.Errorf("action: receive_confirmation_done | result: fail | client_id: %v | error: %v", client.config.ID, err)
+	} else {
+		parts := strings.Split(string(conf), ":")
+		if len(parts) == 2 && parts[0] == "OK" {
+			log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %s", parts[1])
+		} else {
+			log.Errorf("action: consulta_ganadores | result: fail | response: %s", string(conf))
+		}
+	}
+	// Ahora sí, cerrar
+	if err := client.Shutdown(); err != nil {
+		log.Criticalf("action: shutdown | result: fail | client_id: %v | error: %v", client.config.ID, err)
+	}
 }
