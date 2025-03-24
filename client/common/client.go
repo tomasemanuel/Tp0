@@ -1,10 +1,12 @@
 package common
 
 import (
+	"bufio"
 	"encoding/binary"
 	"net"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -22,6 +24,7 @@ type ClientConfig struct {
 	ServerAddress string
 	LoopAmount    int
 	LoopPeriod    time.Duration
+	MaxBatchSize  int  
 }
 
 // Client Entity that encapsulates how
@@ -189,4 +192,26 @@ func (c *Client) Shutdown() error {
     log.Infof("action: shutdown | result: success | client_id: %v | message: client finished", c.config.ID)
 
     return nil
+}
+
+func LoadBetsFromFile(path string, agencyID string) ([]*Bet, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var bets []*Bet
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		parts := strings.Split(line, ",")
+		if len(parts) != 5 {
+			continue 
+		}
+		bet := NewBet(agencyID, parts[0], parts[1], parts[2], parts[3], parts[4])
+		bets = append(bets, bet)
+	}
+
+	return bets, nil
 }

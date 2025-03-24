@@ -13,12 +13,30 @@ services:
     entrypoint: /client
     environment:
     - CLI_ID=1
-    - CLI_LOG_LEVEL=DEBUG
-    - CLI_NOMBRE=Santiago Lionel
-    - CLI_APELLIDO=Lorca
-    - CLI_DOCUMENTO=30904465
-    - CLI_NACIMIENTO=1999-03-17
-    - CLI_NUMERO=7574
+    image: client:latest
+    networks:
+    - testing_net
+    volumes:
+    - ./client/config.yaml:/config.yaml
+  client2:
+    container_name: client2
+    depends_on:
+    - server
+    entrypoint: /client
+    environment:
+    - CLI_ID=2
+    image: client:latest
+    networks:
+    - testing_net
+    volumes:
+    - ./client/config.yaml:/config.yaml
+  client3:
+    container_name: client3
+    depends_on:
+    - server
+    entrypoint: /client
+    environment:
+    - CLI_ID=3
     image: client:latest
     networks:
     - testing_net
@@ -35,4 +53,3 @@ services:
     - testing_net
     volumes:
     - ./server/config.ini:/config.ini
-version: '3'

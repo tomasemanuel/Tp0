@@ -46,16 +46,23 @@ def load_bets() -> list[Bet]:
 
 def process_message(msg: bytes, addr):
     """
-    Process a message from a client.
+    Process a batch message from a client.
+    Each line represents one bet.
     """
-    logging.info("action: process_message | result: in_progress")
 
-    try:
-        bet = Bet.deserialize(msg)
-        store_bets([bet])
-    except Exception as e:
-        logging.error(f"action: bet stored | result: fail | error: {e}")
-        return
+    logging.info("action: process_message | result: in_progress")
+    lines = msg.decode("utf-8").strip().split("\n")
+    bets = []
+
+    for line in lines:
+        try:
+            bet = Bet.deserialize(line.encode("utf-8"))
+            bets.append(bet)
+        except Exception as e:
+            logging.error(
+                f"action: apuesta_recibida | result: fail | cantidad: {len(lines)} | error: {e}")
+            raise ValueError("Invalid bet format in batch")
+
+    store_bets(bets)
     logging.info(
-        f"action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}"
-    )
+        f"action: apuesta_recibida | result: success | cantidad: {len(bets)}")

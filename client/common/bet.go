@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"strings"
 )
 
 type Bet struct {
@@ -30,3 +31,12 @@ func (b *Bet) Serialize() []byte {
 	b.agency, b.first_name, b.last_name, 
 	b.document, b.birth_date, b.number))
 }
+
+func SerializeBatch(bets []*Bet) []byte {
+	var lines []string
+	for _, b := range bets {
+		lines = append(lines, string(b.Serialize()))
+	}
+	return []byte(strings.Join(lines, "\n"))
+}
+

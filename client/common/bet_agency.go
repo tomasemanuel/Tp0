@@ -38,6 +38,24 @@ func (bet_agency *BetAgency) SendBet() {
 	log.Infof("action: send_bet | result: success | client_id: %v", bet_agency.client.config.ID)
 }
 
+func SendBetsInBatches(client *Client, bets []*Bet, maxBatchSize int) {
+	for i := 0; i < len(bets); i += maxBatchSize {
+		end := i + maxBatchSize
+		if end > len(bets) {
+			end = len(bets)
+		}
+		batch := bets[i:end]
+		serialized := SerializeBatch(batch)
+		err := client.StartClient(serialized)
+		if err != nil {
+			log.Errorf("action: send_batch | result: fail | error: %v", err)
+		} else {
+			log.Infof("action: send_batch | result: success | size: %d", len(batch))
+		}
+	}
+}
+
+
 
 func (agency *BetAgency) Start() {
 	agency.SendBet()

@@ -57,28 +57,19 @@ class Server:
             return 0
 
     def __handle_client_connection(self):
-        """
-        Read message from a specific client socket and closes the socket
-
-        If a problem arises in the communication with the client, the
-        client socket will also be closed
-        """
-
         try:
             msg_length = self.__receive_message_length()
-
             if msg_length == 0:
                 return
 
-            msg = self.__safe_receive(msg_length).rstrip()
+            msg = self.__safe_receive(msg_length).strip()
             addr = self.client_socket.getpeername()
-            logging.info(
-                f'action: receive_message | result: success | ip: {addr[0]} | dni: {msg.decode().split("|")[3]}')
 
-            process_message(msg, addr)
-
-            self.__send_success_message()
-            # self.stop()
+            try:
+                process_message(msg, addr)
+                self.__send_success_message()
+            except Exception:
+                self.__send_error_message()
 
         except OSError as e:
             self.__send_error_message()

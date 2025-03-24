@@ -115,9 +115,17 @@ func main() {
 		LoopPeriod:    v.GetDuration("loop.period"),
 	}
 
-	bet_agency := common.NewBetAgency(clientConfig, v.GetString("NOMBRE"), v.GetString("APELLIDO"), v.GetString("DOCUMENTO"), v.GetString("NACIMIENTO"), v.GetString("NUMERO"))
-	common.PrintBetAgency(bet_agency)
-	bet_agency.Start()
+
+	client := common.NewClient(clientConfig)
+
+	filePath := fmt.Sprintf("./.data/agency-%s.csv", clientConfig.ID)
 	
+	bets, err := common.LoadBetsFromFile(filePath, clientConfig.ID)
+	if err != nil {
+		log.Criticalf("action: load_bets | result: fail | error: %v", err)
+	}
+
+	common.SendBetsInBatches(client, bets, clientConfig.MaxBatchSize)
+
 	log.Infof("action: client_finished | result: success | client_id: %v", clientConfig.ID)
 }	
