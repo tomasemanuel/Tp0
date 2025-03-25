@@ -16,7 +16,7 @@ import (
 
 const CONFIRM_MSG_LEN = 3
 const MAX_MSG_LEN = 4
-const DONE_MESSAGE = "done"
+const DONE_MESSAGE = "done:"
 const EXIT = "exit"
 var log = logging.MustGetLogger("log")
 
@@ -209,19 +209,24 @@ func LoadBetsFromFile(path string, agencyID string) ([]*Bet, error) {
 func SendDoneMessage(client *Client) {
 	log.Info("action: send_done_message | result: in_progress | client_id: %v", client.config.ID)
 
-	doneMsg := fmt.Sprintf("DONE_MESSAGE:%s", client.config.ID)
+	doneMsg := fmt.Sprintf("%s%s", DONE_MESSAGE, client.config.ID)
 	err := client.SendMsg([]byte(doneMsg))
+	if err != nil {
+		log.Errorf("action: send_done_message | result: fail | client_id: %v | error: %v", client.config.ID, err)
+		return
+	}
 	log.Info("action: send_done_message | result: success | client_id: %v", client.config.ID)
 	conf, err :=client.SafeRecv(8)
-	log.Info("action: receive_confirmation_done | result: success | client_id: %v", client.config.ID)
+	log.Info("action: receive_confirmation_done | result: in_progess | client_id: %s",  conf)
 	if err != nil {
 		log.Errorf("action: receive_confirmation_done | result: fail | client_id: %v | error: %v", client.config.ID, err)
 	} else {
+		log.Infof("action: receive_confirmation_done | result: success | client_id: %v | response: %s ", client.config.ID, string(conf))
 		parts := strings.Split(string(conf), ":")
 		if len(parts) == 2 && parts[0] == "OK" {
 			log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %s", parts[1])
 		} else {
-			log.Errorf("action: consulta_ganadores | result: fail | response: %s", string(conf))
+			log.Errorf("action: consulta_ganadores | result: fail | response: %s,cliente id %d", string(conf), client.config.ID)
 		}
 	}
 	if err := client.Shutdown(); err != nil {

@@ -1,7 +1,7 @@
 import socket
 import logging
 import signal
-from common.utils import process_message
+from common.utils import process_message, load_bets, has_won
 import os
 
 MAX_MSG_SIZE = 4
@@ -16,8 +16,8 @@ class Server:
         self._server_socket.listen(listen_backlog)
         self.client_socket = None
         self._is_running = True
-        self.done_agencies = set()
-        self.number_of_clients = os.getenv('CLIENTS_LENGTH', 0)
+        self.done_agencies = {}
+        self.number_of_clients = int(os.getenv('CLIENTS_LENGTH', 0))
 
     def run(self):
         """
@@ -30,7 +30,10 @@ class Server:
 
         while self._is_running:
             try:
-                if self.done_agencies.__len__() == self.number_of_clients:
+                logging.info(
+                    f"action: run | result: in_progress len: {len(self.done_agencies.keys())} y {self.number_of_clients}")
+                if len(self.done_agencies.keys()) == self.number_of_clients:
+                    logging.info("action: lottery | result: in_progress")
                     self.lotery()
                     break
                 self.client_socket = self.__accept_new_connection()
@@ -46,10 +49,42 @@ class Server:
                     logging.error(f"action: run | result: fail | error: {e}")
                     self.__close_client_connection()
                     break
+            except Exception as e:
+                logging.error(f"action: run | result: fail | error: {e}")
+                # self.__close_client_connection()
+                break
 
     def lotery(self):
-        logging.info("action: lotery | result: in_progress")
+        logging.info("action: sorteo | result: in_progress")
+
         winners_by_agency = {}
+
+        for bet in load_bets():
+            if has_won(bet):
+                if bet.agency not in winners_by_agency:
+                    winners_by_agency[bet.agency] = 0
+                winners_by_agency[bet.agency] += 1
+
+        for agency_id, client_socket in self.done_agencies.items():
+            winners = winners_by_agency.get(agency_id, 0)
+            response = f"OK:{winners}".ljust(8)
+
+            try:
+                bytes_to_send = response.encode('utf-8')
+                client_socket.sendall(bytes_to_send)
+                logging.info(
+                    f"action: sorteo | result: success | agency: {agency_id} | winners: {winners}")
+                # self.client_socket = client_socket
+                # self.__close_client_connection()
+
+            except Exception as e:
+                logging.error(...)
+            except Exception as e:
+                logging.error(
+                    f"action: sorteo | result: fail | agency: {agency_id} | error: {e}")
+
+        logging.info(
+            f"action: sorteo | result: success")
 
     def __receive_message_length(self):
         try:
@@ -74,28 +109,32 @@ class Server:
         try:
             addr = self.client_socket.getpeername()
             while self.client_socket:
-                logging.info(
-                    f"action: handle_client_connection | result: in_progress | ip: {addr[0]}")
+                # logging.info(
+                #     f"action: handle_client_connection | result: in_progress | ip: {addr[0]}")
                 msg_length = self.__receive_message_length()
-                logging.info(
-                    f"action: handle_client_connection | result: in_progress | ip: {addr[0]} | msg_length: {msg_length}")
+                # logging.info(
+                #     f"action: handle_client_connection | result: in_progress | ip: {addr[0]} | msg_length: {msg_length}")
                 if msg_length == 0:
                     break
                 msg = self.__safe_receive(msg_length).strip()
                 if not msg:
                     break
-                logging.info(
-                    f"action: handle_client_connection_still | result: in_progress | ip: {addr[0]} | msg: {msg}")
+
                 try:
                     agencyID = process_message(msg, addr)
                     if agencyID:
                         logging.info(
                             f"action: done_received | result: success | ip: {addr[0]}")
-                        self.done_agencies.add(agencyID)
-                        break
+                        self.done_agencies[agencyID] = self.client_socket
+                        logging.info(
+                            f"action: done agencies | result: success | ip: {self.done_agencies}")
+                        return
                     self.__send_success_message()
-                except Exception:
+                except Exception as e:
+                    logging.error(
+                        f"action: handle_client_connection | result: fail | error: {e}")
                     self.__send_error_message()
+            logging.info(f"action: handle_client_connection | result: success")
         except OSError as e:
             self.__send_error_message()
 

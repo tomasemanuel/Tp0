@@ -44,16 +44,15 @@ def load_bets() -> list[Bet]:
             yield Bet(row[0], row[1], row[2], row[3], row[4], row[5])
 
 
-def process_message(msg: bytes, addr, done_agencies: set, winners_by_agency: dict):
+def process_message(msg: bytes, addr):
     """
     Process a batch message from a client.
     Each line represents one bet.
     """
 
     logging.info("action: process_message | result: in_progress")
+
     decoded = msg.decode("utf-8").strip()
-    logging.debug(
-        f"action: process_message | result: in_progress | decoded: {decoded}")
     if decoded.startswith("done:"):
         logging.info(
             f"action: done_received | result: success | ip: {addr[0]}")
