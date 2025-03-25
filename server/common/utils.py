@@ -50,8 +50,6 @@ def process_message(msg: bytes, addr):
     Each line represents one bet.
     """
 
-    logging.info("action: process_message | result: in_progress")
-
     decoded = msg.decode("utf-8").strip()
     if decoded.startswith("done:"):
         logging.info(

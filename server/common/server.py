@@ -30,10 +30,7 @@ class Server:
 
         while self._is_running:
             try:
-                logging.info(
-                    f"action: run | result: in_progress len: {len(self.done_agencies.keys())} y {self.number_of_clients}")
                 if len(self.done_agencies.keys()) == self.number_of_clients:
-                    logging.info("action: lottery | result: in_progress")
                     self.lotery()
                     break
                 self.client_socket = self.__accept_new_connection()
@@ -55,7 +52,6 @@ class Server:
                 break
 
     def lotery(self):
-        logging.info("action: sorteo | result: in_progress")
 
         winners_by_agency = {}
 
@@ -202,8 +198,6 @@ class Server:
     def __safe_send(self, message):
         total_sent = 0
         bytes_to_send = message.encode('utf-8')
-        logging.info(
-            f"action: safe_send | result: in_progress | message: {message}")
         while total_sent < len(message):
             n = self.client_socket.send(bytes_to_send[total_sent:])
             total_sent += n
