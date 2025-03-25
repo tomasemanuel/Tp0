@@ -221,7 +221,6 @@ func SendDoneMessage(client *Client) {
 	}
 	log.Info("action: send_done_message | result: success | client_id: %v", client.config.ID)
 	conf, err :=client.SafeRecv(8)
-	log.Info("action: receive_confirmation_done | result: in_progess | client_id: %s",  conf)
 	if err != nil {
 		log.Errorf("action: receive_confirmation_done | result: fail | client_id: %v | error: %v", client.config.ID, err)
 	} else {
