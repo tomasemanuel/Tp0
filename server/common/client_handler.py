@@ -1,7 +1,7 @@
 import socket
 import logging
 import signal
-from common.utils import decode_utf8, encode_string_utf8, load_bets, process_message, lotery
+from common.utils import load_bets, process_message, run_lottery, store_bets
 
 
 MAX_MSG_SIZE = 4
@@ -122,7 +122,7 @@ class ClientHandler:
         return buffer
 
 
-def create_client_handler(client_socket, lock, done_agencies, number_of_clients):
-    handler = ClientHandler(client_socket, lock,
-                            done_agencies, number_of_clients)
+def create_client_handler(client_socket, file_lock, agency_lock, done_agencies, number_of_clients):
+    handler = ClientHandler(client_socket, file_lock,
+                            agency_lock, done_agencies, number_of_clients)
     handler.handle_client_connection()

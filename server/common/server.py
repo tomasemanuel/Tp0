@@ -3,7 +3,7 @@ import logging
 import signal
 import os
 from multiprocessing import Process, Lock
-from client_handler import create_client_handler
+from common.client_handler import create_client_handler
 
 MAX_MSG_SIZE = 4
 
@@ -24,31 +24,31 @@ class Server:
         self.processes = []
 
     def run(self):
-    while self._is_running:
-        try:
-            if len(self.done_agencies.keys()) == self.number_of_clients:
-                logging.info("action: all_clients_done | result: success")
+        while self._is_running:
+            try:
+                if len(self.done_agencies.keys()) == self.number_of_clients:
+                    logging.info("action: all_clients_done | result: success")
 
+                    break
+
+                client_socket = self.__accept_new_connection()
+                if client_socket is None or not self._is_running:
+                    break
+
+                process = Process(
+                    target=create_client_handler,
+                    args=(client_socket, self.file_lock, self.agency_lock, self.done_agencies,
+                          self.number_of_clients)
+                )
+                self.processes.append(process)
+                process.start()
+
+            except OSError as e:
+                logging.error(f"action: run | result: fail | error: {e}")
                 break
-
-            client_socket = self.__accept_new_connection()
-            if client_socket is None or not self._is_running:
+            except Exception as e:
+                logging.error(f"action: run | result: fail | error: {e}")
                 break
-
-            process = Process(
-                target=create_client_handler,
-                args=(client_socket, self.file_lock, self.lock, self.done_agencies,
-                      self.number_of_clients,)
-            )
-            self.processes.append(process)
-            process.start()
-
-        except OSError as e:
-            logging.error(f"action: run | result: fail | error: {e}")
-            break
-        except Exception as e:
-            logging.error(f"action: run | result: fail | error: {e}")
-            break
 
     def __accept_new_connection(self):
         """

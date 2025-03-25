@@ -48,8 +48,8 @@ def process_message(msg: bytes, addr, file_lock, agency_lock) -> int:
     """
     Process a batch message from a client.
     Each line represents one bet.
+    If it's a "done" message, return the agency ID.
     """
-
     decoded = msg.decode("utf-8").strip()
     if decoded.startswith("done:"):
         logging.info(
@@ -57,7 +57,6 @@ def process_message(msg: bytes, addr, file_lock, agency_lock) -> int:
         with agency_lock:
             agency_id = int(decoded.split(":")[1])
             return agency_id
-
     else:
         lines = decoded.split("\n")
         bets = []
@@ -70,8 +69,7 @@ def process_message(msg: bytes, addr, file_lock, agency_lock) -> int:
             f"action: apuesta_recibida | result: success | cantidad: {len(bets)}")
 
 
-def lotery(done_agencies: dict[int, socket.socket]):
-
+def run_lottery(done_agencies):
     winners_by_agency = {}
 
     for bet in load_bets():
@@ -80,7 +78,7 @@ def lotery(done_agencies: dict[int, socket.socket]):
                 winners_by_agency[bet.agency] = 0
             winners_by_agency[bet.agency] += 1
 
-    for agency_id, client_socket in self.done_agencies.items():
+    for agency_id, client_socket in done_agencies.items():
         winners = winners_by_agency.get(agency_id, 0)
         response = f"OK:{winners}".ljust(8)
 
@@ -89,12 +87,8 @@ def lotery(done_agencies: dict[int, socket.socket]):
             client_socket.sendall(bytes_to_send)
             logging.info(
                 f"action: sorteo | result: success | agency: {agency_id} | winners: {winners}")
-
-        except Exception as e:
-            logging.error(...)
         except Exception as e:
             logging.error(
                 f"action: sorteo | result: fail | agency: {agency_id} | error: {e}")
 
-    logging.info(
-        f"action: sorteo | result: success")
+    logging.info("action: sorteo | result: success")
