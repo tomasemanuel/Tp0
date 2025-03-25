@@ -19,65 +19,13 @@ services:
     volumes:
     - ./client/config.yaml:/config.yaml
     - ./.data:/.data
-  client2:
-    container_name: client2
-    depends_on:
-    - server
-    entrypoint: /client
-    environment:
-    - CLI_ID=2
-    image: client:latest
-    networks:
-    - testing_net
-    volumes:
-    - ./client/config.yaml:/config.yaml
-    - ./.data:/.data
-  client3:
-    container_name: client3
-    depends_on:
-    - server
-    entrypoint: /client
-    environment:
-    - CLI_ID=3
-    image: client:latest
-    networks:
-    - testing_net
-    volumes:
-    - ./client/config.yaml:/config.yaml
-    - ./.data:/.data
-  client4:
-    container_name: client4
-    depends_on:
-    - server
-    entrypoint: /client
-    environment:
-    - CLI_ID=4
-    image: client:latest
-    networks:
-    - testing_net
-    volumes:
-    - ./client/config.yaml:/config.yaml
-    - ./.data:/.data
-  client5:
-    container_name: client5
-    depends_on:
-    - server
-    entrypoint: /client
-    environment:
-    - CLI_ID=5
-    image: client:latest
-    networks:
-    - testing_net
-    volumes:
-    - ./client/config.yaml:/config.yaml
-    - ./.data:/.data
   server:
     container_name: server
     entrypoint: python3 /main.py
     environment:
     - PYTHONUNBUFFERED=1
     - LOGGING_LEVEL=DEBUG
-    - CLIENTS_LENGTH=5
+    - CLIENTS_LENGTH=1
     image: server:latest
     networks:
     - testing_net

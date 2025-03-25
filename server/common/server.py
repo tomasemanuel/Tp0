@@ -1,8 +1,9 @@
 import socket
 import logging
 import signal
-from common.utils import process_message, load_bets, has_won
 import os
+from multiprocessing import Process, Lock
+from client_handler import create_client_handler
 
 MAX_MSG_SIZE = 4
 
@@ -18,146 +19,36 @@ class Server:
         self._is_running = True
         self.done_agencies = {}
         self.number_of_clients = int(os.getenv('CLIENTS_LENGTH', 0))
+        self.file_lock = Lock()
+        self.agency_lock = Lock()
+        self.processes = []
 
     def run(self):
-        """
-        Dummy Server loop
+    while self._is_running:
+        try:
+            if len(self.done_agencies.keys()) == self.number_of_clients:
+                logging.info("action: all_clients_done | result: success")
 
-        Server that accept a new connections and establishes a
-        communication with a client. After client with communucation
-        finishes, servers starts to accept new connections again
-        """
-
-        while self._is_running:
-            try:
-                if len(self.done_agencies.keys()) == self.number_of_clients:
-                    self.lotery()
-                    break
-                self.client_socket = self.__accept_new_connection()
-                if self.client_socket is None or not self._is_running:
-                    break
-                self.__handle_client_connection()
-
-            except OSError as e:
-                if client_socket is None:
-                    logging.error(f"action: run | result: client disconnected")
-                    break
-                else:
-                    logging.error(f"action: run | result: fail | error: {e}")
-                    self.__close_client_connection()
-                    break
-            except Exception as e:
-                logging.error(f"action: run | result: fail | error: {e}")
-                # self.__close_client_connection()
                 break
 
-    def lotery(self):
+            client_socket = self.__accept_new_connection()
+            if client_socket is None or not self._is_running:
+                break
 
-        winners_by_agency = {}
+            process = Process(
+                target=create_client_handler,
+                args=(client_socket, self.file_lock, self.lock, self.done_agencies,
+                      self.number_of_clients,)
+            )
+            self.processes.append(process)
+            process.start()
 
-        for bet in load_bets():
-            if has_won(bet):
-                if bet.agency not in winners_by_agency:
-                    winners_by_agency[bet.agency] = 0
-                winners_by_agency[bet.agency] += 1
-
-        for agency_id, client_socket in self.done_agencies.items():
-            winners = winners_by_agency.get(agency_id, 0)
-            response = f"OK:{winners}".ljust(8)
-
-            try:
-                bytes_to_send = response.encode('utf-8')
-                client_socket.sendall(bytes_to_send)
-                logging.info(
-                    f"action: sorteo | result: success | agency: {agency_id} | winners: {winners}")
-                # self.client_socket = client_socket
-                # self.__close_client_connection()
-
-            except Exception as e:
-                logging.error(...)
-            except Exception as e:
-                logging.error(
-                    f"action: sorteo | result: fail | agency: {agency_id} | error: {e}")
-
-        logging.info(
-            f"action: sorteo | result: success")
-
-    def __receive_message_length(self):
-        try:
-            receive = self.client_socket.recv(MAX_MSG_SIZE)
-            if not receive:
-                return 0
-            msg_len = int.from_bytes(
-                receive, byteorder='little')
-
-            logging.info(
-                f"action: receive_message_length | result: success | msg_len: {msg_len}")
-            self.__send_success_message()
-            return msg_len
-
+        except OSError as e:
+            logging.error(f"action: run | result: fail | error: {e}")
+            break
         except Exception as e:
-            self.__send_error_message()
-            logging.error(
-                "action: receive_message_length | result: fail | error: {e}")
-            return 0
-
-    def __handle_client_connection(self):
-        try:
-            addr = self.client_socket.getpeername()
-            while self.client_socket:
-                # logging.info(
-                #     f"action: handle_client_connection | result: in_progress | ip: {addr[0]}")
-                msg_length = self.__receive_message_length()
-                # logging.info(
-                #     f"action: handle_client_connection | result: in_progress | ip: {addr[0]} | msg_length: {msg_length}")
-                if msg_length == 0:
-                    break
-                msg = self.__safe_receive(msg_length).strip()
-                if not msg:
-                    break
-
-                try:
-                    agencyID = process_message(msg, addr)
-                    if agencyID:
-                        logging.info(
-                            f"action: done_received | result: success | ip: {addr[0]}")
-                        self.done_agencies[agencyID] = self.client_socket
-                        logging.info(
-                            f"action: done agencies | result: success | ip: {self.done_agencies}")
-                        return
-                    self.__send_success_message()
-                except Exception as e:
-                    logging.error(
-                        f"action: handle_client_connection | result: fail | error: {e}")
-                    self.__send_error_message()
-            logging.info(f"action: handle_client_connection | result: success")
-        except OSError as e:
-            self.__send_error_message()
-
-    def __close_client_connection(self):
-        # logging.info('action: close_client_connection | result: in_progress')
-        try:
-            if self.client_socket:
-                try:
-                    self.client_socket.shutdown(socket.SHUT_RDWR)
-                except OSError as e:
-                    if e.errno == 107:  # Transport endpoint is not connected
-                        logging.warning(
-                            f'action: close_client_connection | result: already closed | warning: {e}')
-                    elif e.errno == 9:  # Bad file descriptor
-                        logging.warning(
-                            f'action: close_client_connection | result: already closed | warning: {e}')
-                    else:
-                        raise e  # Re-raise if it's an unexpected error
-        except OSError as e:
-            logging.error(
-                f'action: close_client_connection | result: fail | error: {e}')
-        finally:
-            if self.client_socket:
-                logging.info(
-                    'action: exit | result: success')
-                self.client_socket = None
-            return
+            logging.error(f"action: run | result: fail | error: {e}")
+            break
 
     def __accept_new_connection(self):
         """
@@ -185,36 +76,8 @@ class Server:
         if self.socket:
             self.socket.close()
             self.socket = None
+        for process in self.processes:
+            if process.is_alive():
+                process.join()
+                # process.terminate()
         logging.info("action: exit | result: success")
-
-    def __send_success_message(self):
-        self.__safe_send("ok ")
-        logging.info("action: send_success_message | result: success")
-
-    def __send_error_message(self):
-        self.__safe_send("err")
-        logging.error("action: send_error_message | result: success")
-
-    def __safe_send(self, message):
-        total_sent = 0
-        bytes_to_send = message.encode('utf-8')
-        while total_sent < len(message):
-            n = self.client_socket.send(bytes_to_send[total_sent:])
-            total_sent += n
-        return
-
-    def __safe_receive(self, buf_len):
-
-        msg = 0
-        buffer = bytes()
-        while msg < buf_len:
-            try:
-                message = self.client_socket.recv(buf_len)
-                buffer += message
-                msg += len(message)
-            except OSError as e:
-                logging.error(
-                    f"action: safe_receive | result: fail | error: {e}")
-                return None
-
-        return buffer
