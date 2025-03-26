@@ -2,8 +2,8 @@ import socket
 import logging
 import signal
 import os
-from multiprocessing import Process, Lock
-from common.client_handler import create_client_handler
+from multiprocessing import Process, Lock, Manager
+from common.client_handler import create_client_handler, ClientHandler
 
 MAX_MSG_SIZE = 4
 
@@ -17,7 +17,8 @@ class Server:
         self._server_socket.listen(listen_backlog)
         self.client_socket = None
         self._is_running = True
-        self.done_agencies = {}
+        manager = Manager()
+        self.done_agencies = manager.dict()
         self.number_of_clients = int(os.getenv('CLIENTS_LENGTH', 0))
         self.file_lock = Lock()
         self.agency_lock = Lock()
@@ -26,11 +27,6 @@ class Server:
     def run(self):
         while self._is_running:
             try:
-                if len(self.done_agencies.keys()) == self.number_of_clients:
-                    logging.info("action: all_clients_done | result: success")
-
-                    break
-
                 client_socket = self.__accept_new_connection()
                 if client_socket is None or not self._is_running:
                     break
@@ -72,12 +68,11 @@ class Server:
 
     def stop(self):
         if self.client_socket is not None:
-            self.__close_client_connection()
+            self.close_client_connection()
         if self.socket:
             self.socket.close()
             self.socket = None
         for process in self.processes:
             if process.is_alive():
                 process.join()
-                # process.terminate()
         logging.info("action: exit | result: success")

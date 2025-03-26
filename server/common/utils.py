@@ -52,11 +52,9 @@ def process_message(msg: bytes, addr, file_lock, agency_lock) -> int:
     """
     decoded = msg.decode("utf-8").strip()
     if decoded.startswith("done:"):
-        logging.info(
-            f"action: done_received | result: success | ip: {addr[0]}")
-        with agency_lock:
-            agency_id = int(decoded.split(":")[1])
-            return agency_id
+        agency_id = int(decoded.split(":")[1])
+        return agency_id
+
     else:
         lines = decoded.split("\n")
         bets = []
@@ -67,28 +65,3 @@ def process_message(msg: bytes, addr, file_lock, agency_lock) -> int:
             store_bets(bets)
         logging.info(
             f"action: apuesta_recibida | result: success | cantidad: {len(bets)}")
-
-
-def run_lottery(done_agencies):
-    winners_by_agency = {}
-
-    for bet in load_bets():
-        if has_won(bet):
-            if bet.agency not in winners_by_agency:
-                winners_by_agency[bet.agency] = 0
-            winners_by_agency[bet.agency] += 1
-
-    for agency_id, client_socket in done_agencies.items():
-        winners = winners_by_agency.get(agency_id, 0)
-        response = f"OK:{winners}".ljust(8)
-
-        try:
-            bytes_to_send = response.encode('utf-8')
-            client_socket.sendall(bytes_to_send)
-            logging.info(
-                f"action: sorteo | result: success | agency: {agency_id} | winners: {winners}")
-        except Exception as e:
-            logging.error(
-                f"action: sorteo | result: fail | agency: {agency_id} | error: {e}")
-
-    logging.info("action: sorteo | result: success")

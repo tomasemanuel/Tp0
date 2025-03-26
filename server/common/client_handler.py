@@ -1,7 +1,7 @@
 import socket
 import logging
 import signal
-from common.utils import load_bets, process_message, run_lottery, store_bets
+from common.utils import load_bets, process_message, store_bets, has_won
 
 
 MAX_MSG_SIZE = 4
@@ -26,10 +26,10 @@ class ClientHandler:
         try:
             addr = self.client_socket.getpeername()
             while self.client_socket:
-                msg_length = self.__receive_message_length()
+                msg_length = self.receive_message_length()
                 if msg_length == 0:
                     break
-                msg = self.__safe_receive(msg_length).strip()
+                msg = self.safe_receive(msg_length).strip()
                 if not msg:
                     break
 
@@ -38,12 +38,17 @@ class ClientHandler:
                         msg, addr, self.file_lock, self.agency_lock)
                     if agencyID:
                         logging.info(
-                            f"action: done_received | result: success | ip: {addr[0]}")
-                        with self.lock:
+                            f"action: done_received | result: success | ip: {addr[0]} from agency: {agencyID}")
+                        with self.agency_lock:
                             self.done_agencies[agencyID] = self.client_socket
-                        logging.info(
-                            f"action: done agencies | result: success | ip: {self.done_agencies}")
-                        return
+                            logging.info(
+                                f"action: done agencies | result: success | len: {len(self.done_agencies.keys())} and {self.number_of_clients} and {self.done_agencies.keys()}")
+                            if len(self.done_agencies.keys()) == self.number_of_clients:
+                                logging.info(
+                                    "action: all_clients_done | result: success")
+                                run_lottery(self.done_agencies)
+                            break
+
                     self.__send_success_message()
                 except Exception as e:
                     logging.error(
@@ -53,13 +58,12 @@ class ClientHandler:
         except OSError as e:
             self.__send_error_message()
 
-    def __receive_message_length(self):
+    def receive_message_length(self):
         try:
             receive = self.client_socket.recv(MAX_MSG_SIZE)
             if not receive:
                 return 0
             msg_len = int.from_bytes(receive, byteorder='little')
-
             logging.info(
                 f"action: receive_message_length | result: success | msg_len: {msg_len}")
             self.__send_success_message()
@@ -71,7 +75,7 @@ class ClientHandler:
                 f"action: receive_message_length | result: fail | error: {e}")
             return 0
 
-    def __close_client_connection(self):
+    def close_client_connection(self):
         try:
             if self.client_socket:
                 try:
@@ -107,7 +111,7 @@ class ClientHandler:
             total_sent += n
         return
 
-    def __safe_receive(self, buf_len):
+    def safe_receive(self, buf_len):
         msg = 0
         buffer = bytes()
         while msg < buf_len:
@@ -120,6 +124,47 @@ class ClientHandler:
                     f"action: safe_receive | result: fail | error: {e}")
                 return None
         return buffer
+
+
+def run_lottery(done_agencies):
+    winners_by_agency = {}
+
+    for bet in load_bets():
+        if has_won(bet):
+            if bet.agency not in winners_by_agency:
+                winners_by_agency[bet.agency] = 0
+            winners_by_agency[bet.agency] += 1
+    logging.info(
+        f"action: sorteo | result: success | winners_by_agency: {winners_by_agency}")
+    for agency_id, client_socket in done_agencies.items():
+        winners = winners_by_agency.get(agency_id, 0)
+        response = f"OK:{winners}".ljust(8)
+        try:
+            client_socket.sendall(response.encode('utf-8'))
+            logging.info(
+                f"action: sorteo | result: success | agency: {agency_id} | winners: {winners}")
+        except Exception as e:
+            logging.error(
+                f"action: sorteo | result: fail | agency: {agency_id} | error: {e}")
+            return
+        try:
+            client_handler = ClientHandler(
+                client_socket, None, None, None, None)
+            msg_length = client_handler.receive_message_length()
+            if msg_length == 0:
+                return
+            msg = client_handler.safe_receive(msg_length).strip()
+            if msg == "exit":
+                logging.info(
+                    f"action: exit_received | result: success | agency: {agency_id}")
+            else:
+                logging.warning(
+                    f"action: unexpected_msg_after_lottery | msg: {msg} | agency: {agency_id}")
+        except Exception as e:
+            logging.error(
+                f"action: wait_exit_after_lottery | result: fail | agency: {agency_id} | error: {e}")
+
+    logging.info("action: sorteo | result: success")
 
 
 def create_client_handler(client_socket, file_lock, agency_lock, done_agencies, number_of_clients):

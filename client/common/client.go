@@ -225,14 +225,11 @@ func SendDoneMessage(client *Client) {
 		log.Errorf("action: receive_confirmation_done | result: fail | client_id: %v | error: %v", client.config.ID, err)
 	} else {
 		log.Infof("action: receive_confirmation_done | result: success | client_id: %v | response: %s ", client.config.ID, string(conf))
+		client.SendMsgLen(len([]byte(EXIT)))
+		client.conn.Write([]byte(EXIT))
 		log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %s", string(conf))
-		// parts := strings.Split(string(conf), ":")
-		// if len(parts) == 2 && parts[0] == "OK" {
-		// 	log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %s", parts[1])
-		// } else {
-		// 	log.Errorf("action: consulta_ganadores | result: fail | response: %s,cliente id %d", string(conf), client.config.ID)
-		// }
 	}
+
 	if err := client.Shutdown(); err != nil {
 		log.Criticalf("action: shutdown | result: fail | client_id: %v | error: %v", client.config.ID, err)
 	}
