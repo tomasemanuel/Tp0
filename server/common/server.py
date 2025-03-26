@@ -3,7 +3,7 @@ import logging
 import signal
 import os
 from common.utils import load_bets, has_won
-from client_handler import ClientHandler
+from common.client_handler import ClientHandler
 
 
 class Server:
