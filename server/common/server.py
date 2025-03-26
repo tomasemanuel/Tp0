@@ -2,7 +2,7 @@ import socket
 import logging
 import signal
 import os
-from multiprocessing import Process, Lock, Manager
+from multiprocessing import Process, Lock, Manager, Barrier
 from common.client_handler import create_client_handler, ClientHandler
 
 MAX_MSG_SIZE = 4
@@ -19,10 +19,12 @@ class Server:
         self._is_running = True
         manager = Manager()
         self.done_agencies = manager.dict()
+        self.winners_by_agency = manager.dict()
         self.number_of_clients = int(os.getenv('CLIENTS_LENGTH', 0))
         self.file_lock = Lock()
         self.agency_lock = Lock()
         self.processes = []
+        self.barrier = Barrier(self.number_of_clients)
 
     def run(self):
         while self._is_running:
@@ -34,7 +36,7 @@ class Server:
                 process = Process(
                     target=create_client_handler,
                     args=(client_socket, self.file_lock, self.agency_lock, self.done_agencies,
-                          self.number_of_clients)
+                          self.barrier, self.winners_by_agency)
                 )
                 self.processes.append(process)
                 process.start()

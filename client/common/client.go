@@ -224,10 +224,14 @@ func SendDoneMessage(client *Client) {
 	if err != nil {
 		log.Errorf("action: receive_confirmation_done | result: fail | client_id: %v | error: %v", client.config.ID, err)
 	} else {
-		log.Infof("action: receive_confirmation_done | result: success | client_id: %v | response: %s ", client.config.ID, string(conf))
-		client.SendMsgLen(len([]byte(EXIT)))
-		client.conn.Write([]byte(EXIT))
+		log.Infof("action: receive_confirmation_done | result: success | client_id: %d | response: %s ", client.config.ID, string(conf))
 		log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %s", string(conf))
+		err = client.SendMsg([]byte(EXIT))
+		if err != nil {
+			log.Errorf("action: send_exit_message | result: fail | client_id: %v | error: %v", client.config.ID, err)
+			return
+		}
+
 	}
 
 	if err := client.Shutdown(); err != nil {
