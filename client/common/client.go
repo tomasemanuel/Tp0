@@ -95,7 +95,7 @@ func (c* Client) SendMsgLen(msg_len int) error {
 func (c *Client) SendMsg(msg []byte,wait_done bool) error {
 	err := c.SendMsgLen(len(msg))
 	if err != nil {
-		log.Errorf("action: send_message_len | result: fail | client_id: %v | error: %v", c.config.ID, err)
+		// log.Errorf("action: send_message_len | result: fail | client_id: %v | error: %v", c.config.ID, err)
 		return err
 	}
 	
@@ -118,7 +118,7 @@ func (c *Client) SendAny(msg []byte, wait_done bool) error {
 		sent, err := c.conn.Write(msg[total_sent:])
 		total_sent += sent
 		if err != nil {
-			log.Errorf("action: send_any | result: fail | client_id: %v | error: %v", c.config.ID, err)
+			// log.Errorf("action: send_any | result: fail | client_id: %v | error: %v", c.config.ID, err)
 			return err
 		}
 	}

@@ -24,7 +24,6 @@ class Server:
     def run(self):
         while self._is_running:
             try:
-                logging.info("action: run | result: waiting %d",
                              len(self.done_agencies))
 
                 client_socket = self.__accept_new_connection()
