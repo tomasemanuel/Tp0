@@ -263,8 +263,8 @@ func SendDoneMessage(client *Client) {
 			client.conn = nil
 		}
 		time.Sleep(100 * time.Millisecond)
-		
 	}
+	log.Info("action: exit | result: success | client_id: %v", client.config.ID)
 	client.isFinished = true
 	
 }
