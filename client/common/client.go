@@ -257,9 +257,14 @@ func SendDoneMessage(client *Client) {
 			AnnounceWinners(winners)
 			break
 		}
-		client.Shutdown()
+		if client.conn != nil {
+			client.conn.Close()
+			client.conn = nil
+		}
+		
 		time.Sleep(100 * time.Millisecond)
 	}
+	client.isFinished = true
 	
 }
 

@@ -35,7 +35,6 @@ class ClientHandler:
                         self.done_agencies[agencyID] = True
                         if len(self.done_agencies) == self.number_of_clients:
                             self.lottery(agencyID)
-
                         else:
                             self.__send_and_wait_confirmation(
                                 encode_string_utf8(WAITING_MSG))
