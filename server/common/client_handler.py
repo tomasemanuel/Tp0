@@ -57,13 +57,14 @@ class ClientHandler:
 
     def __send_and_wait_confirmation(self, msg: bytes):
 
-        self.__safe_send(len(msg).to_bytes(MAX_MSG_SIZE, "little"))
-        if decode_utf8(self.__safe_receive(CONFIRMATION_MSG_LEN)) != SUCCESS_MSG:
+        self._safe_send(len(msg).to_bytes(MAX_MSG_SIZE, "little"))
+        if decode_utf8(self._safe_receive(CONFIRMATION_MSG_LEN)) != SUCCESS_MSG:
             raise socket.error("Client did not confirm message reception")
-
-        self.__safe_send(msg)
-        if decode_utf8(self.__safe_receive(CONFIRMATION_MSG_LEN)) != SUCCESS_MSG:
+        self._safe_send(msg)
+        if decode_utf8(self._safe_receive(CONFIRMATION_MSG_LEN)) != SUCCESS_MSG:
             raise socket.error("Client did not confirm message reception")
+        logging.info(
+            f"action: send_and_wait_confirmation | result: success | msg: {msg}")
 
     def _receive_message_length(self):
         try:
@@ -80,16 +81,6 @@ class ClientHandler:
             logging.error(
                 f"action: receive_message_length | result: fail | error: {e}")
             return 0
-
-    def __send_and_wait_confirmation(self, msg: str):
-
-        self._safe_send(len(msg).to_bytes(MAX_MSG_SIZE, "little"))
-        if decode_utf8(self._safe_receive(CONFIRMATION_MSG_LEN)) != SUCCESS_MSG:
-            raise socket.error("Client did not confirm message reception")
-
-        self._safe_send(msg)
-        if decode_utf8(self._safe_receive(CONFIRMATION_MSG_LEN)) != SUCCESS_MSG:
-            raise socket.error("Client did not confirm message reception")
 
     def __close_client_connection(self):
         logging.info('action: close_client_connection | result: in_progress')
@@ -135,20 +126,12 @@ class ClientHandler:
             winner_bets = get_winner_bets_by_agency(bets, agency_id)
             docs = map(lambda bet: bet.document, winner_bets)
             response = ",".join(docs)
+            logging.info(
+                f"action: lottery | result: success | winners: {response}")
             self.__send_and_wait_confirmation(encode_string_utf8(response))
             self.__close_client_connection()
 
         logging.info("action: sorteo | result: success")
-
-    def __send_and_wait_confirmation(self, msg: bytes):
-
-        self.__safe_send(len(msg).to_bytes(MAX_MSG_SIZE, "little"))
-        if decode_utf8(self.__safe_receive(CONFIRMATION_MSG_LEN)) != SUCCESS_MSG:
-            raise socket.error("Client did not confirm message reception")
-
-        self.__safe_send(msg)
-        if decode_utf8(self.__safe_receive(CONFIRMATION_MSG_LEN)) != SUCCESS_MSG:
-            raise socket.error("Client did not confirm message reception")
 
 
 def create_client_handler(client_socket, file_lock, done_agencies, number_of_clients):

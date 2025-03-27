@@ -20,6 +20,7 @@ const MAX_MSG_LEN = 4
 const DONE_MESSAGE = "done:"
 const SUCCESS_MSG = "succ"
 const WAITING_MESSAGE = "wait"
+const WINNER_SEPARATOR = ","
 const EXIT = "exit"
 var log = logging.MustGetLogger("log")
 
@@ -233,7 +234,13 @@ func (c *Client) ReceiveAndSendConfirmation() (res []byte, res_error error) {
 func checkWinnersAnnouncementMsg(message []byte) bool {
 	return message != nil && string(message) != WAITING_MESSAGE
 }
-
+func  AnnounceWinners(winners []string) {
+	length := len(winners)
+	if len(winners[0]) == 0 {
+		length = 0
+	}
+	log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v", length)
+}
 
 
 func SendDoneMessage(client *Client) {
@@ -248,10 +255,18 @@ func SendDoneMessage(client *Client) {
 			break
 		}
 		if checkWinnersAnnouncementMsg(res) {
-			log.Info("action: receive_confirmation_done | result: success | client_id: %v | response: %s ", client.config.ID, string(res))
+			winners := parseWinners(res)
+			AnnounceWinners(winners)
 			break
 		}
 		client.Shutdown()
 		time.Sleep(100 * time.Millisecond)
 	}
+	
 }
+
+
+func parseWinners(bytes []byte) []string {
+	return strings.Split(string(bytes), WINNER_SEPARATOR)
+}
+
