@@ -56,7 +56,7 @@ def process_message(msg: bytes, addr):
 
     for line in lines:
         try:
-            bet = Bet.deserialize(line.encode("utf-8"))
+            bet = Bet.deserialize(line)
             bets.append(bet)
         except Exception as e:
             logging.error(

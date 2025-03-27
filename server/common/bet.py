@@ -17,11 +17,10 @@ class Bet:
         self.number = int(number)
 
     @staticmethod
-    def deserialize(msg: bytes):
+    def deserialize(msg: str):
         """
         Deserialize a message into a Bet object
         """
-        message = msg.decode('utf-8')
         bet_agency, name, last_name, document, birthdate, number = message.split(
             BET_MSG_SEPARATOR)
 
