@@ -32,13 +32,26 @@ services:
     volumes:
     - ./client/config.yaml:/config.yaml
     - ./.data:/.data
+  client3:
+    container_name: client3
+    depends_on:
+    - server
+    entrypoint: /client
+    environment:
+    - CLI_ID=3
+    image: client:latest
+    networks:
+    - testing_net
+    volumes:
+    - ./client/config.yaml:/config.yaml
+    - ./.data:/.data
   server:
     container_name: server
     entrypoint: python3 /main.py
     environment:
     - PYTHONUNBUFFERED=1
     - LOGGING_LEVEL=DEBUG
-    - CLIENTS_LENGTH=2
+    - CLIENTS_LENGTH=3
     image: server:latest
     networks:
     - testing_net

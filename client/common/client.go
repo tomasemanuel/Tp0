@@ -184,7 +184,6 @@ func (c *Client) Shutdown() error {
         }
         log.Info("action: shutdown | result: success | client_id: %v | message: connection closed", c.config.ID)
     }
-	
 
     c.isFinished = true
     log.Info("action: shutdown | result: success | client_id: %v | message: client finished", c.config.ID)

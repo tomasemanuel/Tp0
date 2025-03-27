@@ -35,11 +35,12 @@ class ClientHandler:
                         self.done_agencies[agencyID] = True
                         if len(self.done_agencies) == self.number_of_clients:
                             self.lottery(agencyID)
-                            return
                         else:
                             self.__send_and_wait_confirmation(
                                 encode_string_utf8(WAITING_MSG))
-                    self._send_success_message()
+                    if self.client_socket:
+                        self._send_success_message()
+
                 except Exception as e:
                     logging.error(
                         f"action: handle_client_connection | result: fail | error: {e}")
