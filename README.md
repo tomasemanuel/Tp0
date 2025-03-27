@@ -90,7 +90,49 @@ Se utilizo la libreria de multiprocessing para la concurrencia. En vez de crear 
     * Cada ClientHandler marca su agencia como completada.
     * Cuando todas las agencias están marcadas, se lanza el sorteo.
 
-###
+## 📡 Protocolo Implementado
+
+El protocolo de comunicación entre cliente y servidor está basado en TCP:
+
+### 📦 Estructura del Mensaje
+
+Cada mensaje enviado del cliente al servidor representa **una o más apuestas**, en el siguiente formato:
+```{agencia}|{nombre}|{apellido}|{documento}|{fecha_nacimiento}|{numero_apuesta}```
+
+* Separador de campos:** `|` (pipe)  
+* Separador de apuestas en batch:** `\n`
+
+---
+
+### 🧾 Campos de una Apuesta
+
+| Campo                 | Descripción                                                      |
+|----------------------|------------------------------------------------------------------|
+| **Agencia**           | Número entero que identifica la agencia del cliente              |
+| **Nombre**            | Cadena de texto (sin restricción de longitud)                    |
+| **Apellido**          | Cadena de texto (sin restricción de longitud)                    |
+| **Documento**         | Número de 8 dígitos                                              |
+| **Fecha de nacimiento** | En formato `YYYY-MM-DD`                                        |
+| **Número de apuesta** | Número entero de 4 dígitos que representa el número apostado     |
+
+### 🔄 Flujo del Protocolo
+
+1. **Envío desde el cliente:**
+   - El cliente serializa un batch de apuestas.
+   - Envía primero la longitud del mensaje (4 bytes, little endian) y espera la confirmacion.
+   - Luego el mensaje serializado.
+   - Espera confirmaciones del servidor por cada parte del mensaje.
+
+2. **Procesamiento en el servidor:**
+   - Recibe la longitud y envia la confirmacion
+   - Recibe el mensaje con su longitud, envia confirmacion y lo deserializa.
+   - Almacena cada apuesta en `bets.csv`.
+   - Si recibe un mensaje con el formato `done:<agencyID>`, se considera finalizada esa agencia.
+
+4. **Resultado:**
+   - Cuando todas las agencias envían `done:`, el servidor realiza el sorteo.
+   - Envía a cada cliente la lista de documentos de los ganadores, separados por coma y el cliente imprime segun la cantidad de documentos ganadores.
+---
 
 Al ejecutar el comando `make docker-compose-up` para comenzar la ejecución del ejemplo y luego el comando `make docker-compose-logs`, se observan los siguientes logs:
 
