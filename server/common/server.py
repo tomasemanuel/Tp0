@@ -17,7 +17,8 @@ class Server:
         self._is_running = True
         self.file_lock = Lock()
         self.number_of_clients = int(os.getenv('CLIENTS_LENGTH', 0))
-        self.barrier = Barrier(self.number_of_clients)
+        self.manager = Manager()
+        self.done_agencies = self.manager.dict()
         self.processes = []
 
     def run(self):
@@ -27,7 +28,7 @@ class Server:
                 if client_socket is None or not self._is_running:
                     break
                 process = Process(target=create_client_handler, args=(
-                    client_socket, self.file_lock, self.barrier))
+                    client_socket, self.file_lock, self.done_agencies, self.number_of_clients))
                 process.start()
                 self.processes.append(process)
                 logging.info("action: run | result: success")

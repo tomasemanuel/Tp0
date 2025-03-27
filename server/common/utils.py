@@ -67,3 +67,15 @@ def process_message(msg: bytes, addr, file_lock):
             store_bets(bets)
             logging.info(
                 f"action: apuesta_recibida | result: success | cantidad: {len(bets)}")
+
+
+def get_winner_bets_by_agency(bets: list[Bet], agency: str) -> list[Bet]:
+    return list(filter(lambda bet: has_won(bet) and bet.agency == int(agency), bets))
+
+
+def decode_utf8(msg: bytes) -> str:
+    return msg.decode('utf-8')
+
+
+def encode_string_utf8(msg: str) -> bytes:
+    return msg.encode('utf-8')

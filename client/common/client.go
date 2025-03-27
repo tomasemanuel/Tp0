@@ -18,6 +18,8 @@ import (
 const CONFIRM_MSG_LEN = 3
 const MAX_MSG_LEN = 4
 const DONE_MESSAGE = "done:"
+const SUCCESS_MSG = "succ"
+const WAITING_MESSAGE = "wait"
 const EXIT = "exit"
 var log = logging.MustGetLogger("log")
 
@@ -86,17 +88,17 @@ func (c* Client) SendMsgLen(msg_len int) error {
 	msg_len_bytes := make([]byte, MAX_MSG_LEN)
 
 	binary.LittleEndian.PutUint32(msg_len_bytes, uint32(msg_len))
-	return c.SendAny(msg_len_bytes)
+	return c.SendAny(msg_len_bytes,true)
 }
 
-func (c *Client) SendMsg(msg []byte) error {
+func (c *Client) SendMsg(msg []byte,wait_done bool) error {
 	err := c.SendMsgLen(len(msg))
 	if err != nil {
 		log.Errorf("action: send_message_len | result: fail | client_id: %v | error: %v", c.config.ID, err)
 		return err
 	}
 	
-	err = c.SendAny(msg)
+	err = c.SendAny(msg,wait_done)
 	if err != nil {
 		log.Errorf("action: send_any_message | result: fail | client_id: %v | error: %v", c.config.ID, err)
 		return err
@@ -105,7 +107,7 @@ func (c *Client) SendMsg(msg []byte) error {
 
 }
 
-func (c *Client) SendAny(msg []byte) error {
+func (c *Client) SendAny(msg []byte, wait_done bool) error {
 	var err error
 
 	total_sent := 0
@@ -119,11 +121,13 @@ func (c *Client) SendAny(msg []byte) error {
 			return err
 		}
 	}
-	err = c.ReceiveConfirmation()
+	if wait_done {
+		err = c.ReceiveConfirmation()
 
-	if err != nil {
-		log.Errorf("action: receive_confirmation | result: fail | client_id: %v | error: %v", c.config.ID, err)
-		return err
+		if err != nil {
+			log.Errorf("action: receive_confirmation | result: fail | client_id: %v | error: %v", c.config.ID, err)
+			return err
+		}
 	}
 
 	return err
@@ -136,7 +140,7 @@ func (c *Client) ReceiveConfirmation() error {
 		return err
 	}
 
-	log.Info("action: receive_confirmation | result: success | client_id: %v", c.config.ID)
+	log.Info("action: receive_confirmation | result: success | client_id: %v %s", c.config.ID, conf)
 	return err
 }
 
@@ -150,19 +154,20 @@ func (c *Client) SafeRecv(length int) (res []byte, res_error error) {
 	for total_read < length {
 		read, err := c.conn.Read(buf)
 		if err == io.EOF {
-			log.Info("action: safe_recv | result: success | client_id: %v", c.config.ID)
+			log.Info("action: safe_recv | result: success | client_id: %v, %s", c.config.ID, result)
 			return result[:total_read], nil
 		} else if err != nil {
 			log.Errorf("action: safe_recv | result: fail | client_id: %v | error: %v", c.config.ID, err)
 			break
 		} else if read == 0 {
-			log.Info("action: safe_recv | result: success | client_id: %v", c.config.ID)
+			log.Info("action: safe_recv | result: success | client_id: %v, read:", c.config.ID)
 			return result, net.ErrClosed
 		}
 		copy(result[:len(buf)], buf)
 		total_read += read
 		buf = make([]byte, length)
 	}
+	log.Infof("action: safe_recv | result: success | client_id: %v | read (string): %q", c.config.ID, string(result[:total_read]))
 	return result, err
 }
 
@@ -209,31 +214,44 @@ func LoadBetsFromFile(path string, agencyID string) ([]*Bet, error) {
 }
 
 
+func (c *Client) ReceiveAndSendConfirmation() (res []byte, res_error error) {
+	rcv_len, err := c.SafeRecv(MAX_MSG_LEN)
+
+	c.SendAny([]byte(SUCCESS_MSG),false)
+
+	msg_len := int(binary.LittleEndian.Uint32(rcv_len))
+	if msg_len == 0 {
+		return []byte{}, err
+	}
+	res, _ = c.SafeRecv(msg_len)
+
+	return res, c.SendAny([]byte(SUCCESS_MSG),false)
+}
+
+
+
+func checkWinnersAnnouncementMsg(message []byte) bool {
+	return message != nil && string(message) != WAITING_MESSAGE
+}
+
+
 
 func SendDoneMessage(client *Client) {
-	log.Info("action: send_done_message | result: in_progress | client_id: %v", client.config.ID)
+	message := fmt.Sprintf("done:%s", client.config.ID)
 
-	doneMsg := fmt.Sprintf("%s%s", DONE_MESSAGE, client.config.ID)
-	err := client.SendMsg([]byte(doneMsg))
-	if err != nil {
-		log.Errorf("action: send_done_message | result: fail | client_id: %v | error: %v", client.config.ID, err)
-		return
-	}
-	log.Info("action: send_done_message | result: success | client_id: %v", client.config.ID)
-	conf, err :=client.SafeRecv(8)
-	if err != nil {
-		log.Errorf("action: receive_confirmation_done | result: fail | client_id: %v | error: %v", client.config.ID, err)
-	} else {
-		log.Infof("action: receive_confirmation_done | result: success | client_id: %v | response: %s ", client.config.ID, string(conf))
-		log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %s", string(conf))
-		// parts := strings.Split(string(conf), ":")
-		// if len(parts) == 2 && parts[0] == "OK" {
-		// 	log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %s", parts[1])
-		// } else {
-		// 	log.Errorf("action: consulta_ganadores | result: fail | response: %s,cliente id %d", string(conf), client.config.ID)
-		// }
-	}
-	if err := client.Shutdown(); err != nil {
-		log.Criticalf("action: shutdown | result: fail | client_id: %v | error: %v", client.config.ID, err)
+	for {
+		client.createClientSocket()
+		client.SendMsg([]byte(message),false)
+		
+		res, err := client.ReceiveAndSendConfirmation()
+		if err != nil {
+			break
+		}
+		if checkWinnersAnnouncementMsg(res) {
+			log.Info("action: receive_confirmation_done | result: success | client_id: %v | response: %s ", client.config.ID, string(res))
+			break
+		}
+		client.Shutdown()
+		time.Sleep(100 * time.Millisecond)
 	}
 }
