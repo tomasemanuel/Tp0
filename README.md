@@ -79,6 +79,7 @@ Llama a AnnounceWinners e imprime la cantidad de ganadores.
 El cliente imprime exit y termina su ejecución.
 
 ### Sincronizacion y Concurrencia
+Se utilizo la libreria de multiprocessing para la concurrencia. En vez de crear hilos, el servidor crea un proceso por cada cliente y a su vez mientras hace manejo de sus conexiones podra seguir recibiendo nuevas.
 * Lock de archivo (Lock) — Para proteger la escritura en el archivo de apuestas
   ```self.file_lock = Lock()```
     * Se usa para garantizar exclusión mutua cuando múltiples procesos (ClientHandler) intentan acceder al archivo bets.csv.
