@@ -24,7 +24,6 @@ class Server:
     def run(self):
         while self._is_running:
             try:
-                             len(self.done_agencies))
 
                 client_socket = self.__accept_new_connection()
                 if client_socket is None or not self._is_running:
@@ -57,6 +56,7 @@ class Server:
             return None
 
     def stop(self):
+
         if self.client_socket is not None:
             self.__close_client_connection()
         for process in self.processes:
