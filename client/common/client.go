@@ -247,6 +247,7 @@ func SendDoneMessage(client *Client) {
 
 	for {
 		client.createClientSocket()
+		log.Info("action: sending_done | result: success | client_id: %v", client.config.ID)
 		client.SendMsg([]byte(message),false)
 		res, err := client.ReceiveAndSendConfirmation()
 		if err != nil {

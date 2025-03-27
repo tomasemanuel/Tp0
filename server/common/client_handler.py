@@ -23,9 +23,10 @@ class ClientHandler:
                 msg_length = self._receive_message_length()
                 if msg_length == 0:
                     break
-                msg = self._safe_receive(msg_length).strip()
-                if not msg:
+                msg_ = self._safe_receive(msg_length)
+                if not msg_:
                     break
+                msg = msg_.strip()
                 try:
                     agencyID = process_message(msg, addr, self.file_lock)
                     if agencyID:
