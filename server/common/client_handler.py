@@ -1,3 +1,4 @@
+import time
 import socket
 import logging
 from common.utils import process_message, load_bets, has_won, get_winner_bets_by_agency, encode_string_utf8, decode_utf8
@@ -130,6 +131,7 @@ class ClientHandler:
             logging.info(
                 f"action: lottery | result: success | winners: {response}")
             self.__send_and_wait_confirmation(encode_string_utf8(response))
+            time.sleep(0.1)
             self.__close_client_connection()
 
         logging.info("action: sorteo | result: success")
