@@ -27,31 +27,31 @@ El cliente (client.go) se conecta al servidor mediante TCP (createClientSocket).
 
 Se envían apuestas en batches usando SendBetsInBatches. Cada batch es serializado y enviado con:
 
-La longitud del mensaje (SendMsgLen)
+* La longitud del mensaje (SendMsgLen)
 
-El contenido (SendAny)
+* El contenido (SendAny)
 
 Espera una confirmación "ok " desde el servidor (ReceiveConfirmation)
 
 ### 3. Recepción y Procesamiento en el Servidor
 El ClientHandler (en client_handler.py) recibe cada batch:
 
-Lee el tamaño del mensaje (_receive_message_length)
+* Lee el tamaño del mensaje (_receive_message_length)
 
-Lee el contenido real (_safe_receive)
+* Lee el contenido real (_safe_receive)
 
-Llama a process_message que guarda las apuestas en bets.csv usando store_bets.
+* Llama a process_message que guarda las apuestas en bets.csv usando store_bets.
 
 Una vez que el cliente terminó de mandar apuestas, envía un mensaje done:<agencyID>.
 
 ### 4. Coordinación del Sorteo
 Cuando el servidor recibe done:<agencyID>:
 
-Marca esa agencia como “terminada” (done_agencies[agencyID] = True)
+* Marca esa agencia como “terminada” (done_agencies[agencyID] = True)
 
-Si aún faltan agencias: le envía el mensaje "wait" al cliente y espera
+* Si aún faltan agencias: le envía el mensaje "wait" al cliente y espera
 
-Si todos los clientes notificaron "done", el servidor ejecuta lottery(agencyID).
+* Si todos los clientes notificaron "done", el servidor ejecuta lottery(agencyID).
 
 ### 5. Sorteo y Resultados
 El sorteo carga todas las apuestas (load_bets) y filtra aquellas ganadoras (has_won) del agencyID.
@@ -60,15 +60,15 @@ Devuelve una cadena con los documentos ganadores separados por coma.
 
 El servidor envía al cliente:
 
-Longitud del mensaje con ganadores
+* Longitud del mensaje con ganadores
 
-Espera confirmación del cliente (succ)
+* Espera confirmación del cliente (succ)
 
-Envía los ganadores
+* Envía los ganadores
 
-Espera otra confirmación del cliente
+* Espera otra confirmación del cliente
 
-Cierra la conexión
+* Cierra la conexión
 
 ### 6. Cliente Recibe Resultados
 El cliente recibe el mensaje (documentos de ganadores) con ReceiveAndSendConfirmation.
@@ -78,7 +78,16 @@ Llama a AnnounceWinners e imprime la cantidad de ganadores.
 ### 7. Cierre
 El cliente imprime exit y termina su ejecución.
 
-El servidor espera que todos los procesos hijos finalicen y luego se apaga si recibe SIGTERM.
+### Sincronizacion y Concurrencia
+* Lock de archivo (Lock) — Para proteger la escritura en el archivo de apuestas
+  ```self.file_lock = Lock()```
+    * Se usa para garantizar exclusión mutua cuando múltiples procesos (ClientHandler) intentan acceder al archivo bets.csv.
+    * Asegura que no haya condiciones de carrera al guardar (store_bets) o leer (load_bets) apuestas.
+* Manager().dict() — Para compartir estado entre procesos
+  ```self.done_agencies = self.manager.dict()```
+    * Permite compartir entre procesos el estado de qué agencias ya mandaron el mensaje "done:<agencyID>".
+    * Cada ClientHandler marca su agencia como completada.
+    * Cuando todas las agencias están marcadas, se lanza el sorteo.
 
 ###
 
