@@ -229,7 +229,7 @@ func (c *Client) ReceiveAndSendConfirmation() (res []byte, res_error error) {
 }
 
 
-
+// check 
 func checkWinnersAnnouncementMsg(message []byte) bool {
 	return message != nil && string(message) != WAITING_MESSAGE
 }
