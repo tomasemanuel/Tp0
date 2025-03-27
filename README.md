@@ -17,21 +17,70 @@ Los targets disponibles son:
 * **docker-image**: Buildea las imágenes a ser utilizadas tanto en el servidor como en el cliente. Este target es utilizado por **docker-compose-up**, por lo cual se lo puede utilizar para testear nuevos cambios en las imágenes antes de arrancar el proyecto.
 * **build**: Compila la aplicación cliente para ejecución en el _host_ en lugar de en docker. La compilación de esta forma es mucho más rápida pero requiere tener el entorno de Golang instalado en la máquina _host_.
 
-### Servidor
-El servidor del presente ejemplo es un EchoServer: los mensajes recibidos por el cliente son devueltos inmediatamente. El servidor actual funciona de la siguiente forma:
-1. Servidor acepta una nueva conexión.
-2. Servidor recibe mensaje del cliente y procede a responder el mismo.
-3. Servidor desconecta al cliente.
-4. Servidor procede a recibir una conexión nuevamente.
+### 1. Inicio del Servidor
+El servidor (server.py) se inicializa escuchando conexiones TCP en un puerto determinado.
 
-### Cliente
-El cliente del presente ejemplo se conecta reiteradas veces al servidor y envía mensajes de la siguiente forma.
-1. Cliente se conecta al servidor.
-2. Cliente genera mensaje incremental.
-recibe mensaje del cliente y procede a responder el mismo.
-3. Cliente envía mensaje al servidor y espera mensaje de respuesta.
-Servidor desconecta al cliente.
-4. Cliente verifica si aún debe enviar un mensaje y si es así, vuelve al paso 2.
+Al recibir una conexión, lanza un nuevo proceso que maneja a ese cliente usando create_client_handler.
+
+### 2. Conexión del Cliente
+El cliente (client.go) se conecta al servidor mediante TCP (createClientSocket).
+
+Se envían apuestas en batches usando SendBetsInBatches. Cada batch es serializado y enviado con:
+
+La longitud del mensaje (SendMsgLen)
+
+El contenido (SendAny)
+
+Espera una confirmación "ok " desde el servidor (ReceiveConfirmation)
+
+### 3. Recepción y Procesamiento en el Servidor
+El ClientHandler (en client_handler.py) recibe cada batch:
+
+Lee el tamaño del mensaje (_receive_message_length)
+
+Lee el contenido real (_safe_receive)
+
+Llama a process_message que guarda las apuestas en bets.csv usando store_bets.
+
+Una vez que el cliente terminó de mandar apuestas, envía un mensaje done:<agencyID>.
+
+### 4. Coordinación del Sorteo
+Cuando el servidor recibe done:<agencyID>:
+
+Marca esa agencia como “terminada” (done_agencies[agencyID] = True)
+
+Si aún faltan agencias: le envía el mensaje "wait" al cliente y espera
+
+Si todos los clientes notificaron "done", el servidor ejecuta lottery(agencyID).
+
+### 5. Sorteo y Resultados
+El sorteo carga todas las apuestas (load_bets) y filtra aquellas ganadoras (has_won) del agencyID.
+
+Devuelve una cadena con los documentos ganadores separados por coma.
+
+El servidor envía al cliente:
+
+Longitud del mensaje con ganadores
+
+Espera confirmación del cliente (succ)
+
+Envía los ganadores
+
+Espera otra confirmación del cliente
+
+Cierra la conexión
+
+### 6. Cliente Recibe Resultados
+El cliente recibe el mensaje (documentos de ganadores) con ReceiveAndSendConfirmation.
+
+Llama a AnnounceWinners e imprime la cantidad de ganadores.
+
+### 7. Cierre
+El cliente imprime exit y termina su ejecución.
+
+El servidor espera que todos los procesos hijos finalicen y luego se apaga si recibe SIGTERM.
+
+###
 
 Al ejecutar el comando `make docker-compose-up` para comenzar la ejecución del ejemplo y luego el comando `make docker-compose-logs`, se observan los siguientes logs:
 
