@@ -131,7 +131,7 @@ class ClientHandler:
             logging.info(
                 f"action: lottery | result: success | winners: {response}")
             self.__send_and_wait_confirmation(encode_string_utf8(response))
-            time.sleep(0.1)
+            # time.sleep(0.1)
             self.__close_client_connection()
 
         logging.info("action: sorteo | result: success")

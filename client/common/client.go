@@ -262,6 +262,7 @@ func SendDoneMessage(client *Client) {
 			client.conn.Close()
 			client.conn = nil
 		}
+		time.Sleep(100 * time.Millisecond)
 		
 	}
 	client.isFinished = true

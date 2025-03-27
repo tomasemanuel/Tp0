@@ -57,7 +57,7 @@ class Server:
             return None
 
     def stop(self):
-
+        # time.sleep(1)
         if self.client_socket is not None:
             self.__close_client_connection()
         for process in self.processes:
