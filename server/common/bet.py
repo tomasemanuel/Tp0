@@ -21,7 +21,7 @@ class Bet:
         """
         Deserialize a message into a Bet object
         """
-        bet_agency, name, last_name, document, birthdate, number = message.split(
+        bet_agency, name, last_name, document, birthdate, number = msg.split(
             BET_MSG_SEPARATOR)
 
         return Bet(bet_agency, name, last_name, document, birthdate, number)
