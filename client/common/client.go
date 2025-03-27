@@ -155,20 +155,20 @@ func (c *Client) SafeRecv(length int) (res []byte, res_error error) {
 	for total_read < length {
 		read, err := c.conn.Read(buf)
 		if err == io.EOF {
-			log.Info("action: safe_recv | result: success | client_id: %v, %s", c.config.ID, result)
+			// log.Info("action: safe_recv | result: success | client_id: %v, %s", c.config.ID, result)
 			return result[:total_read], nil
 		} else if err != nil {
-			log.Errorf("action: safe_recv | result: fail | client_id: %v | error: %v", c.config.ID, err)
+			// log.Errorf("action: safe_recv | result: fail | client_id: %v | error: %v", c.config.ID, err)
 			break
 		} else if read == 0 {
-			log.Info("action: safe_recv | result: success | client_id: %v, read:", c.config.ID)
+			// log.Info("action: safe_recv | result: success | client_id: %v, read:", c.config.ID)
 			return result, net.ErrClosed
 		}
 		copy(result[:len(buf)], buf)
 		total_read += read
 		buf = make([]byte, length)
 	}
-	log.Infof("action: safe_recv | result: success | client_id: %v | read (string): %q", c.config.ID, string(result[:total_read]))
+	// log.Infof("action: safe_recv | result: success | client_id: %v | read (string): %q", c.config.ID, string(result[:total_read]))
 	return result, err
 }
 

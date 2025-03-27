@@ -132,5 +132,5 @@ func main() {
 	common.SendBetsInBatches(client, bets, clientConfig.MaxBatchSize)
 	
 	common.SendDoneMessage(client)
-	log.Info("action: client_finished | result: success | bets: %d ", len(bets))
+	log.Info("action: exit | result: success | bets: %d ", len(bets))
 }	

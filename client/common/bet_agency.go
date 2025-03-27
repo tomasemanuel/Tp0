@@ -25,7 +25,7 @@ func PrintBetAgency(betAgency *BetAgency) {
 
 func SendBetsInBatches(client *Client, bets []*Bet, maxBatchSize int) {
 	client.createClientSocket()
-	log.Info("action: create_socket | result: success | client_id: %v and max batch size %d", client.config.ID, maxBatchSize)
+	// log.Info("action: create_socket | result: success | client_id: %v and max batch size %d", client.config.ID, maxBatchSize)
 	for i := 0; i < len(bets); i += maxBatchSize {
 		end := i + maxBatchSize
 		if end > len(bets) {
@@ -34,14 +34,14 @@ func SendBetsInBatches(client *Client, bets []*Bet, maxBatchSize int) {
 		batch := bets[i:end]
 	
 		serialized := SerializeBatch(batch)
-		log.Info("action: serialize_batch | result: success | client_id: %v | batch_size: %d", client.config.ID, len(batch))
+		// log.Info("action: serialize_batch | result: success | client_id: %v | batch_size: %d", client.config.ID, len(batch))
 		var err = client.SendMsg(serialized,true)
 		if err != nil {
-			log.Errorf("action: send_message | result: fail | client_id: %v | error: %v")
+			// log.Errorf("action: send_message | result: fail | client_id: %v | error: %v")
 			client.Shutdown()
 			return
 		}
-		log.Info("action: send_message | result: success | client_id: %v", client.config.ID)
+		// log.Info("action: send_message | result: success | client_id: %v", client.config.ID)
 	}
 
 	// client.Shutdown() // This line is commented out to avoid closing the connection before the server has finished processing the messages

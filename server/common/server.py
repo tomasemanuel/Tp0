@@ -24,6 +24,9 @@ class Server:
     def run(self):
         while self._is_running:
             try:
+                logging.info("action: run | result: waiting %d",
+                             len(self.done_agencies))
+
                 client_socket = self.__accept_new_connection()
                 if client_socket is None or not self._is_running:
                     break
@@ -57,6 +60,8 @@ class Server:
     def stop(self):
         if self.client_socket is not None:
             self.__close_client_connection()
+        for process in self.processes:
+            process.join()
         if self._server_socket:
             self._server_socket.close()
             self._server_socket = None
