@@ -1,14 +1,18 @@
 import socket
 import logging
-from common.utils import process_message
-
+from common.utils import process_message, load_bets, has_won
+from multiprocessing import Lock, Manager
 MAX_MSG_SIZE = 4
+WAITING_MSG = "waiting"
+CONFIRMATION_MSG_LEN = 4
+SUCCESS_MSG = "succ"
 
 
 class ClientHandler:
-    def __init__(self, client_socket, done_agencies):
+    def __init__(self, client_socket, file_lock: Lock, barrier):
         self.client_socket = client_socket
-        self.done_agencies = done_agencies
+        self.file_lock = file_lock
+        self.barrier = barrier
 
     def handle(self):
         try:
@@ -20,15 +24,14 @@ class ClientHandler:
                 msg = self._safe_receive(msg_length).strip()
                 if not msg:
                     break
-
                 try:
-                    agencyID = process_message(msg, addr)
+                    agencyID = process_message(msg, addr, self.file_lock)
                     if agencyID:
                         logging.info(
                             f"action: done_received | result: success | ip: {addr[0]}")
-                        self.done_agencies[agencyID] = self.client_socket
-                        logging.info(
-                            f"action: done agencies | result: success | ip: {self.done_agencies}")
+                        self.barrier.wait()
+                        self.lottery(agencyID)
+
                         return
                     self._send_success_message()
                 except Exception as e:
@@ -36,8 +39,17 @@ class ClientHandler:
                         f"action: handle_client_connection | result: fail | error: {e}")
                     self._send_error_message()
             logging.info(f"action: handle_client_connection | result: success")
-        except OSError:
-            self._send_error_message()
+
+        except socket.timeout:
+            self.__send_error_message()
+            logging.error(
+                "action: handle_client_connection !!! | result: fail | error: timeout")
+        except OSError as e:
+            self.__send_error_message()
+            logging.error(
+                f"action: receive_message | result: fail | error: {e}")
+        finally:
+            self.__close_client_connection()
 
     def _receive_message_length(self):
         try:
@@ -54,6 +66,23 @@ class ClientHandler:
             logging.error(
                 f"action: receive_message_length | result: fail | error: {e}")
             return 0
+
+    def __send_and_wait_confirmation(self, msg: bytes):
+
+        self.__safe_send(len(msg).to_bytes(MAX_MSG_SIZE, "little"))
+        if decode_utf8(self._safe_receive(CONFIRMATION_MSG_LEN)) != SUCCESS_MSG:
+            raise socket.error("Client did not confirm message reception")
+
+        self.__safe_send(msg)
+        if decode_utf8(self._safe_receive(CONFIRMATION_MSG_LEN)) != SUCCESS_MSG:
+            raise socket.error("Client did not confirm message reception")
+
+    def __close_client_connection(self):
+        logging.info('action: close_client_connection | result: in_progress')
+        self.client_socket.shutdown(socket.SHUT_RDWR)
+        self.client_socket.close()
+        self.client_socket = None
+        logging.info('action: close_client_connection | result: success')
 
     def _send_success_message(self):
         self._safe_send("ok ")
@@ -83,3 +112,35 @@ class ClientHandler:
                     f"action: safe_receive | result: fail | error: {e}")
                 return None
         return buffer
+
+    def lottery(self, agency_id):
+        winners_by_agency = {}
+        with self.file_lock:
+            for bet in load_bets():
+                if has_won(bet):
+                    if bet.agency not in winners_by_agency:
+                        winners_by_agency[bet.agency] = 0
+                    winners_by_agency[bet.agency] += 1
+        logging.info(
+            f"action: sorteo | result: success | winners_by_agency: {winners_by_agency}")
+
+        winners = winners_by_agency.get(agency_id, 0)
+        response = f"OK:{winners}".ljust(8)
+
+        try:
+            bytes_to_send = response.encode('utf-8')
+            self.client_socket.sendall(bytes_to_send)
+            logging.info(
+                f"action: sorteo | result: success | agency: {agency_id} | winners: {winners}")
+        except Exception as e:
+            logging.error(
+                f"action: sorteo | result: fail | agency: {agency_id} | error: {e}")
+
+        logging.info("action: sorteo | result: success")
+
+
+def create_client_handler(client_socket, file_lock, barrier):
+    client_handler = ClientHandler(
+        client_socket, file_lock, barrier)
+    client_handler.handle()
+    logging.info("action: create_client_handler | result: success")

@@ -44,7 +44,7 @@ def load_bets() -> list[Bet]:
             yield Bet(row[0], row[1], row[2], row[3], row[4], row[5])
 
 
-def process_message(msg: bytes, addr):
+def process_message(msg: bytes, addr, file_lock):
     """
     Process a batch message from a client.
     Each line represents one bet.
@@ -63,6 +63,7 @@ def process_message(msg: bytes, addr):
         for line in lines:
             bet = Bet.deserialize(line.encode("utf-8"))
             bets.append(bet)
-        store_bets(bets)
-        logging.info(
-            f"action: apuesta_recibida | result: success | cantidad: {len(bets)}")
+        with file_lock:
+            store_bets(bets)
+            logging.info(
+                f"action: apuesta_recibida | result: success | cantidad: {len(bets)}")
