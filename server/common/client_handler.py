@@ -44,12 +44,15 @@ class ClientHandler:
                 except Exception as e:
                     logging.error(
                         f"action: handle_client_connection | result: fail | error: {e}")
+                    self._send_error_message()
             logging.info(f"action: handle_client_connection | result: success")
 
         except socket.timeout:
+            self._send_error_message()
             logging.error(
                 "action: handle_client_connection !!! | result: fail | error: timeout")
         except OSError as e:
+            self._send_error_message()
             logging.error(
                 f"action: receive_message | result: fail | error: {e}")
 
@@ -75,6 +78,7 @@ class ClientHandler:
             self._send_success_message()
             return msg_len
         except Exception as e:
+            self._send_error_message()
             logging.error(
                 f"action: receive_message_length | result: fail | error: {e}")
             return 0

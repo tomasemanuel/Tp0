@@ -32,6 +32,7 @@ class Server:
                     client_socket, self.file_lock, self.done_agencies, self.number_of_clients))
                 process.start()
                 self.processes.append(process)
+                time.sleep(0.1)
                 logging.info("action: run | result: success")
 
             except OSError as e:
