@@ -249,7 +249,6 @@ func SendDoneMessage(client *Client) {
 	for {
 		client.createClientSocket()
 		client.SendMsg([]byte(message),false)
-		
 		res, err := client.ReceiveAndSendConfirmation()
 		if err != nil {
 			break
