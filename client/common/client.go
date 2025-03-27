@@ -264,6 +264,7 @@ func SendDoneMessage(client *Client) {
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
+	time.Sleep(1000 * time.Millisecond)
 	log.Info("action: exit | result: success | client_id: %v", client.config.ID)
 	client.isFinished = true
 	
